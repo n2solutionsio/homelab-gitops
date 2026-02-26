@@ -1,0 +1,15 @@
+# cert-manager Helm values for homelab k3s cluster
+replicaCount: 1
+
+webhook:
+  replicaCount: 1
+
+cainjector:
+  replicaCount: 1
+
+crds:
+  enabled: true
+
+# Use public DNS resolvers (Pi-hole unreachable from VLAN 30)
+dns01RecursiveNameservers: "1.1.1.1:53,1.0.0.1:53"
+dns01RecursiveNameserversOnly: true
