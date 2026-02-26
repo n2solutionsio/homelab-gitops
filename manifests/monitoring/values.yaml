@@ -1,0 +1,70 @@
+# kube-prometheus-stack Helm values for homelab k3s cluster
+
+# Disable AlertManager — no notification targets yet
+alertmanager:
+  enabled: false
+
+# Prometheus configuration
+prometheus:
+  prometheusSpec:
+    retention: 15d
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 10Gi
+    # Discover ALL ServiceMonitors, not just chart-labeled ones
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+
+# Grafana configuration
+grafana:
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  persistence:
+    enabled: true
+    storageClassName: nfs-client
+    size: 5Gi
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    hosts:
+      - grafana.homelab.n2solutions.io
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: grafana-dashboards
+          orgId: 1
+          folder: Proxmox
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/grafana-dashboards
+  dashboards:
+    grafana-dashboards:
+      proxmox-overview:
+        gnetId: 10347
+        revision: 5
+        datasource: Prometheus
+      proxmox-fleet:
+        gnetId: 24550
+        revision: 3
+        datasource: Prometheus
+
+# k3s doesn't expose these components via standard ServiceMonitor endpoints
+kubeEtcd:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeProxy:
+  enabled: false
