@@ -53,11 +53,15 @@ grafana:
       proxmox-overview:
         gnetId: 10347
         revision: 5
-        datasource: Prometheus
+        datasource:
+          - name: DS_PROMETHEUS
+            value: Prometheus
       proxmox-fleet:
         gnetId: 24550
         revision: 1
-        datasource: Prometheus
+        datasource:
+          - name: DS_PROMETHEUS
+            value: Prometheus
 
 # k3s doesn't expose these components via standard ServiceMonitor endpoints
 kubeEtcd:
