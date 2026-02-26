@@ -1,0 +1,51 @@
+# Loki Helm values — SingleBinary mode for homelab
+
+deploymentMode: SingleBinary
+
+loki:
+  auth_enabled: false
+  storage:
+    type: filesystem
+  schemaConfig:
+    configs:
+      - from: "2024-01-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: index_
+          period: 24h
+  limits_config:
+    retention_period: 360h
+  compactor:
+    retention_enabled: true
+
+singleBinary:
+  replicas: 1
+  persistence:
+    storageClass: local-path
+    size: 10Gi
+
+# Disable distributed mode components
+read:
+  replicas: 0
+write:
+  replicas: 0
+backend:
+  replicas: 0
+
+# Keep gateway for stable endpoint
+gateway:
+  enabled: true
+
+# Disable optional components
+chunksCache:
+  enabled: false
+resultsCache:
+  enabled: false
+lokiCanary:
+  enabled: false
+minio:
+  enabled: false
+test:
+  enabled: false

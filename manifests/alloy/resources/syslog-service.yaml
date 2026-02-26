@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: alloy-syslog
+  namespace: logging
+  annotations:
+    metallb.universe.tf/loadBalancerIPs: "10.30.30.201"
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  selector:
+    app.kubernetes.io/name: alloy
+  ports:
+    - name: syslog-udp
+      port: 514
+      targetPort: 5514
+      protocol: UDP
