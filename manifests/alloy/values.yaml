@@ -8,60 +8,37 @@ alloy:
     varlog: true
   configMap:
     content: |
-      // Discover Kubernetes pods
-      discovery.kubernetes "pods" {
-        role = "pod"
+      // Find all pod log files on this node
+      local.file_match "pod_logs" {
+        path_targets = [{
+          __path__ = "/var/log/pods/*/*/*.log",
+        }]
       }
 
-      // Relabel to extract useful metadata and construct log paths
-      discovery.relabel "pod_logs" {
-        targets = discovery.kubernetes.pods.targets
-
-        // Only keep running pods
-        rule {
-          source_labels = ["__meta_kubernetes_pod_phase"]
-          regex         = "Pending|Succeeded|Failed|Completed"
-          action        = "drop"
-        }
-        rule {
-          source_labels = ["__meta_kubernetes_namespace"]
-          target_label  = "namespace"
-        }
-        rule {
-          source_labels = ["__meta_kubernetes_pod_name"]
-          target_label  = "pod"
-        }
-        rule {
-          source_labels = ["__meta_kubernetes_pod_container_name"]
-          target_label  = "container"
-        }
-        rule {
-          source_labels = ["__meta_kubernetes_pod_node_name"]
-          target_label  = "node"
-        }
-        rule {
-          source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
-          target_label  = "app"
-        }
-        // Construct log path: /var/log/pods/<namespace>_<pod>_<uid>/<container>/*.log
-        rule {
-          source_labels = ["__meta_kubernetes_namespace", "__meta_kubernetes_pod_name", "__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
-          separator     = "/"
-          regex         = "(.+)/(.+)/(.+)/(.+)"
-          target_label  = "__path__"
-          replacement   = "/var/log/pods/$1_$2_$3/$4/*.log"
-        }
-      }
-
-      // Read pod log files
+      // Read pod log files and add k8s labels via discovery
       loki.source.file "pod_logs" {
-        targets    = discovery.relabel.pod_logs.output
+        targets    = local.file_match.pod_logs.targets
         forward_to = [loki.process.pod_logs.receiver]
       }
 
-      // Parse CRI log format
+      // Parse CRI log format and extract labels from file path
       loki.process "pod_logs" {
+        // Extract namespace, pod, uid, container from path
+        stage.regex {
+          expression = "/var/log/pods/(?P<namespace>[^_]+)_(?P<pod>[^_]+)_(?P<uid>[^/]+)/(?P<container>[^/]+)/"
+          source     = "filename"
+        }
+        stage.labels {
+          values = {
+            namespace = "",
+            pod       = "",
+            container = "",
+          }
+        }
         stage.cri {}
+        stage.label_drop {
+          values = ["uid"]
+        }
         forward_to = [loki.write.loki.receiver]
       }
 
