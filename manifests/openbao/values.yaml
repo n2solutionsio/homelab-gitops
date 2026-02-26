@@ -19,7 +19,8 @@ server:
       }
 
       seal "static" {
-        key = "file:///openbao/unseal/key"
+        current_key_id = "initial-2026"
+        current_key    = "file:///openbao/unseal/key"
       }
 
   # Raft/bbolt needs proper file locking — NFS doesn't support it
