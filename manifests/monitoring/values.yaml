@@ -56,7 +56,7 @@ grafana:
         datasource: Prometheus
       proxmox-fleet:
         gnetId: 24550
-        revision: 3
+        revision: 1
         datasource: Prometheus
 
 # k3s doesn't expose these components via standard ServiceMonitor endpoints
