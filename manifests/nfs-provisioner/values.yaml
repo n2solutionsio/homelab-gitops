@@ -1,0 +1,11 @@
+# NFS Subdir External Provisioner values for homelab k3s cluster
+# Asustor NAS 10G interface on VLAN 20 (Storage)
+
+nfs:
+  server: 10.20.20.5
+  path: /volume1/k3s-data
+
+storageClass:
+  name: nfs-client
+  defaultClass: true
+  archiveOnDelete: true
