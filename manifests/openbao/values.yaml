@@ -1,0 +1,46 @@
+# OpenBao - Helm values
+# Chart: openbao 0.25.6
+# Standalone mode with Raft storage and static auto-unseal
+
+server:
+  standalone:
+    enabled: true
+    config: |
+      ui = true
+
+      listener "tcp" {
+        tls_disable = 1
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
+      }
+
+      storage "raft" {
+        path = "/openbao/data"
+      }
+
+      seal "static" {
+        key = "file:///openbao/unseal/key"
+      }
+
+  # Raft/bbolt needs proper file locking — NFS doesn't support it
+  dataStorage:
+    enabled: true
+    size: 1Gi
+    storageClass: local-path
+
+  # Mount the bootstrap unseal key secret as a file
+  volumes:
+    - name: unseal-key
+      secret:
+        secretName: openbao-unseal-key
+
+  volumeMounts:
+    - name: unseal-key
+      mountPath: /openbao/unseal
+      readOnly: true
+
+injector:
+  enabled: false
+
+ui:
+  enabled: true

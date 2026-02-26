@@ -1,0 +1,13 @@
+# External Secrets Operator - Helm values
+# Chart: external-secrets 2.0.1
+
+installCRDs: true
+
+# Single replica for homelab
+replicaCount: 1
+
+webhook:
+  replicaCount: 1
+
+certController:
+  replicaCount: 1
