@@ -65,14 +65,6 @@ alloy:
           syslog_format = "rfc3164"
           labels        = { job = "syslog" }
         }
-        forward_to = [loki.process.syslog.receiver]
-      }
-
-      // Extract hostname from syslog
-      loki.process "syslog" {
-        stage.label_allow {
-          values = ["hostname"]
-        }
         forward_to = [loki.write.loki.receiver]
       }
 

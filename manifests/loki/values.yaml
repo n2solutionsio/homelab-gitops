@@ -19,6 +19,7 @@ loki:
     retention_period: 360h
   compactor:
     retention_enabled: true
+    delete_request_store: filesystem
 
 singleBinary:
   replicas: 1
