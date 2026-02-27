@@ -1,0 +1,37 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: falco-security-alerts
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: falco.rules
+      rules:
+        - alert: FalcoCriticalEvent
+          expr: increase(falcosecurity_falcosidekick_falco_events_total{priority=~"Emergency|Alert|Critical"}[5m]) > 0
+          for: 0m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Falco critical security event detected"
+            description: "Falco detected a {{ $labels.priority }} priority event (rule: {{ $labels.rule }}) on the cluster."
+
+        - alert: FalcoErrorEvents
+          expr: increase(falcosecurity_falcosidekick_falco_events_total{priority="Error"}[10m]) > 5
+          for: 0m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Elevated Falco error events"
+            description: "More than 5 Falco Error-priority events in the last 10 minutes (rule: {{ $labels.rule }})."
+
+        - alert: FalcoWarningSpike
+          expr: increase(falcosecurity_falcosidekick_falco_events_total{priority="Warning"}[15m]) > 20
+          for: 0m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Spike in Falco warning events"
+            description: "More than 20 Falco Warning-priority events in the last 15 minutes (rule: {{ $labels.rule }})."
