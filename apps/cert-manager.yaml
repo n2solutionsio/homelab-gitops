@@ -17,6 +17,9 @@ spec:
     - repoURL: https://github.com/n2solutionsio/homelab-gitops.git
       targetRevision: main
       ref: values
+    - repoURL: https://github.com/n2solutionsio/homelab-gitops.git
+      targetRevision: main
+      path: manifests/cert-manager/resources
   destination:
     server: https://kubernetes.default.svc
     namespace: cert-manager

@@ -47,6 +47,9 @@ grafana:
     ingressClassName: traefik
     hosts:
       - grafana.homelab.n2solutions.io
+    tls:
+      - hosts:
+          - grafana.homelab.n2solutions.io
   dashboardProviders:
     dashboardproviders.yaml:
       apiVersion: 1
