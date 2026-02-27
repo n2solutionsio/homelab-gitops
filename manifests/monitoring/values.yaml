@@ -23,6 +23,9 @@ prometheus:
 
 # Grafana configuration
 grafana:
+  sidecar:
+    dashboards:
+      searchNamespace: ALL
   admin:
     existingSecret: grafana-admin
     userKey: admin-user

@@ -1,0 +1,33 @@
+# Falco Helm values — runtime threat detection for k3s
+
+# modern_ebpf driver — Ubuntu 24.04 kernel 6.x, no kernel headers needed
+driver:
+  kind: modern_ebpf
+
+# Flush logs immediately
+tty: true
+
+falco:
+  json_output: true
+  json_include_output_property: true
+
+# Falcosidekick — forward alerts to Loki
+falcosidekick:
+  enabled: true
+  config:
+    loki:
+      hostport: http://loki-gateway.logging.svc.cluster.local:80
+      minimumpriority: notice
+      extralabels: "rule,source,priority,tags"
+  # Prometheus ServiceMonitor for sidekick metrics
+  serviceMonitor:
+    enabled: true
+
+# Prometheus ServiceMonitor for Falco metrics
+serviceMonitor:
+  create: true
+
+# Skip k8s-metacollector subchart — CRI enrichment is sufficient
+collectors:
+  kubernetes:
+    enabled: false
