@@ -1,0 +1,46 @@
+# n8n Helm values — workflow automation for homelab k3s
+# Chart: 8gears/n8n 2.0.1
+
+ingress:
+  enabled: true
+  className: traefik
+  hosts:
+    - host: n8n.homelab.n2solutions.io
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - hosts:
+        - n8n.homelab.n2solutions.io
+
+main:
+  config:
+    N8N_HOST: n8n.homelab.n2solutions.io
+    N8N_PROTOCOL: https
+    WEBHOOK_URL: https://n8n.homelab.n2solutions.io/
+    N8N_DIAGNOSTICS_ENABLED: "false"
+    GENERIC_TIMEZONE: America/New_York
+
+  # Reference encryption key from ExternalSecret
+  extraEnv:
+    N8N_ENCRYPTION_KEY:
+      valueFrom:
+        secretKeyRef:
+          name: n8n-encryption-key
+          key: N8N_ENCRYPTION_KEY
+
+  persistence:
+    enabled: true
+    type: dynamic
+    storageClass: nfs-client
+    accessModes:
+      - ReadWriteOnce
+    size: 5Gi
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi

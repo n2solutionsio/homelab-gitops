@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: n8n
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    - repoURL: 8gears.container-registry.com/library
+      targetRevision: 2.0.1
+      chart: n8n
+      helm:
+        valueFiles:
+          - $values/manifests/n8n/values.yaml
+    - repoURL: https://github.com/n2solutionsio/homelab-gitops.git
+      targetRevision: main
+      ref: values
+    - repoURL: https://github.com/n2solutionsio/homelab-gitops.git
+      targetRevision: main
+      path: manifests/n8n/resources
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: n8n
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
