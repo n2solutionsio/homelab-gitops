@@ -1,0 +1,22 @@
+githubConfigUrl: https://github.com/n2solutionsio
+
+githubConfigSecret: github-app-runner
+
+minRunners: 0
+maxRunners: 3
+
+runnerGroup: default
+
+template:
+  spec:
+    containers:
+      - name: runner
+        image: ghcr.io/actions/actions-runner:latest
+        command: ["/home/runner/run.sh"]
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 1000m
+            memory: 512Mi
