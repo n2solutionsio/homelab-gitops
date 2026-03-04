@@ -1,3 +1,7 @@
+controllerServiceAccount:
+  name: gha-runner-controller-gha-rs-controller
+  namespace: arc-systems
+
 githubConfigUrl: https://github.com/n2solutionsio
 
 githubConfigSecret: github-app-runner
