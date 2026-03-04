@@ -6,7 +6,11 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 data:
-  init-schema.sql: |
+  00-create-n8n-db.sql: |
+    -- Create n8n database (n8n manages its own schema)
+    SELECT 'CREATE DATABASE n8n' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'n8n')\gexec
+
+  01-content-metrics-schema.sql: |
     -- Medium article metrics (polled daily via n8n)
     CREATE TABLE IF NOT EXISTS medium_articles (
         id SERIAL PRIMARY KEY,
