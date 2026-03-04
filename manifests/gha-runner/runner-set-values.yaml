@@ -17,6 +17,12 @@ template:
       - name: runner
         image: ghcr.io/actions/actions-runner:latest
         command: ["/home/runner/run.sh"]
+        env:
+          - name: OP_SERVICE_ACCOUNT_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: op-sa-token
+                key: OP_SERVICE_ACCOUNT_TOKEN
         resources:
           requests:
             cpu: 100m
