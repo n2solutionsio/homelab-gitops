@@ -1,0 +1,26 @@
+# Bitnami PostgreSQL Helm values — content metrics datastore
+# Chart: bitnamicharts/postgresql 18.5.2
+
+# Single instance (no replication — homelab)
+architecture: standalone
+
+auth:
+  database: content_metrics
+  existingSecret: postgresql-admin
+  secretKeys:
+    adminPasswordKey: password
+
+primary:
+  persistence:
+    enabled: true
+    storageClass: nfs-client
+    size: 5Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  initdb:
+    scriptsConfigMap: postgresql-init-schema

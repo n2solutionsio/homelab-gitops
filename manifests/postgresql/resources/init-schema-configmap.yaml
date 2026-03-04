@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-init-schema
+  namespace: postgresql
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+data:
+  00-create-n8n-db.sql: |
+    -- Create n8n database (n8n manages its own schema)
+    SELECT 'CREATE DATABASE n8n' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'n8n')\gexec
+
+  01-content-metrics-schema.sql: |
+    -- Medium article metrics (polled daily via n8n)
+    CREATE TABLE IF NOT EXISTS medium_articles (
+        id SERIAL PRIMARY KEY,
+        article_id TEXT UNIQUE NOT NULL,
+        title TEXT NOT NULL,
+        url TEXT,
+        published_at TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS medium_metrics (
+        id SERIAL PRIMARY KEY,
+        article_id TEXT REFERENCES medium_articles(article_id),
+        captured_at TIMESTAMP DEFAULT NOW(),
+        views INT,
+        reads INT,
+        claps INT,
+        voters INT,
+        responses INT
+    );
+
+    -- X metrics (manual weekly entry via n8n webhook form)
+    CREATE TABLE IF NOT EXISTS x_snapshots (
+        id SERIAL PRIMARY KEY,
+        captured_at TIMESTAMP DEFAULT NOW(),
+        followers INT,
+        impressions_28d INT,
+        profile_visits_28d INT,
+        mentions_28d INT
+    );
+
+    CREATE TABLE IF NOT EXISTS x_tweets (
+        id SERIAL PRIMARY KEY,
+        tweet_id TEXT UNIQUE NOT NULL,
+        content TEXT,
+        posted_at TIMESTAMP,
+        tweet_type TEXT  -- 'tweet', 'thread', 'reply'
+    );
+
+    CREATE TABLE IF NOT EXISTS x_tweet_metrics (
+        id SERIAL PRIMARY KEY,
+        tweet_id TEXT REFERENCES x_tweets(tweet_id),
+        captured_at TIMESTAMP DEFAULT NOW(),
+        impressions INT,
+        likes INT,
+        retweets INT,
+        replies INT,
+        quotes INT,
+        bookmarks INT
+    );
