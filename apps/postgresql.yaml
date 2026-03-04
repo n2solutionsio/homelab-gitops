@@ -8,9 +8,8 @@ metadata:
 spec:
   project: default
   sources:
-    - repoURL: oci://registry-1.docker.io/bitnamicharts
+    - repoURL: oci://registry-1.docker.io/bitnamicharts/postgresql
       targetRevision: 18.5.2
-      chart: postgresql
       helm:
         valueFiles:
           - $values/manifests/postgresql/values.yaml
