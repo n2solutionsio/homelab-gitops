@@ -124,6 +124,19 @@ grafana:
       isDefault: false
       jsonData:
         maxLines: 1000
+    - name: PostgreSQL
+      type: postgres
+      access: proxy
+      url: postgresql.postgresql.svc.cluster.local:5432
+      user: postgres
+      database: content_metrics
+      isDefault: false
+      secureJsonData:
+        password: $PG_PASSWORD
+      jsonData:
+        sslmode: disable
+        postgresVersion: 1600
+  envFromSecret: grafana-postgres-datasource
   ingress:
     enabled: true
     ingressClassName: traefik
