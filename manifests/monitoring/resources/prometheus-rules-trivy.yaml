@@ -1,0 +1,28 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: trivy-security-alerts
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: trivy.rules
+      rules:
+        - alert: TrivyCriticalVulnerabilityFound
+          expr: sum by (resource_name, resource_namespace) (trivy_image_vulnerabilities{severity="Critical"}) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Critical CVE found in {{ $labels.resource_namespace }}/{{ $labels.resource_name }}"
+            description: "Trivy detected {{ $value }} critical vulnerabilities in workload {{ $labels.resource_namespace }}/{{ $labels.resource_name }}."
+
+        - alert: TrivyScanJobFailing
+          expr: increase(trivy_operator_image_scan_job_failed_total[30m]) > 3
+          for: 0m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Trivy scan jobs are failing"
+            description: "More than 3 Trivy scan job failures in the last 30 minutes. The vulnerability scanner may be broken."
