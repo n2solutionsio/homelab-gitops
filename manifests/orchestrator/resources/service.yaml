@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: orchestrator
+  namespace: ai-org
+  labels:
+    app: orchestrator
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  selector:
+    app: orchestrator
+  ports:
+    - port: 8080
+      targetPort: health
+      name: health
