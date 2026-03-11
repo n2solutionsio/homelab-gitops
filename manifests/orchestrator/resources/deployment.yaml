@@ -38,6 +38,8 @@ spec:
               value: "C0AK3S3ATD3"
             - name: KAGENT_URL
               value: "http://kagent-controller.kagent.svc.cluster.local:8083"
+            - name: APPROVAL_USER_IDS
+              value: "U08PY23AFC4"
           ports:
             - containerPort: 8080
               name: health
