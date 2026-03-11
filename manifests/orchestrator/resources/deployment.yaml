@@ -36,6 +36,8 @@ spec:
               value: "8080"
             - name: SLACK_COMMAND_CHANNEL
               value: "C0AK3S3ATD3"
+            - name: KAGENT_URL
+              value: "http://kagent-controller.kagent.svc.cluster.local:8083"
           ports:
             - containerPort: 8080
               name: health
