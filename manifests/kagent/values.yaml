@@ -1,4 +1,4 @@
-# kagent Helm values — Anthropic provider, K8s + Helm + Observability agents
+# kagent Helm values — Anthropic provider, K8s + Helm + PromQL agents
 # Chart: kagent/helm/kagent 0.7.23
 
 # Database — use existing PostgreSQL cluster
@@ -56,7 +56,7 @@ agents:
   helm-agent:
     enabled: true
   observability-agent:
-    enabled: true
+    enabled: false
   promql-agent:
     enabled: true
   kgateway-agent:
