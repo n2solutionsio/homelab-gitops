@@ -1,0 +1,87 @@
+# kagent Helm values — Anthropic provider, K8s + Helm + Observability agents
+# Chart: kagent/helm/kagent 0.7.23
+
+# Database — use existing PostgreSQL cluster
+# URL injected from ExternalSecret via volume mount (urlFile takes precedence over url)
+database:
+  type: postgres
+  postgres:
+    vectorEnabled: true
+    url: ""
+    urlFile: /etc/kagent-db/url
+
+# Controller
+controller:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 2
+      memory: 512Mi
+  volumes:
+    - name: db-url
+      secret:
+        secretName: kagent-db-url
+  volumeMounts:
+    - name: db-url
+      mountPath: /etc/kagent-db
+      readOnly: true
+
+# UI
+ui:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# LLM Provider — Anthropic Claude (default)
+providers:
+  default: anthropic
+  anthropic:
+    provider: Anthropic
+    model: claude-sonnet-4-5-20250929
+    apiKeySecretRef: kagent-anthropic
+    apiKeySecretKey: api-key
+
+# Agents — enable only what we need, disable the rest
+agents:
+  k8s-agent:
+    enabled: true
+  helm-agent:
+    enabled: true
+  observability-agent:
+    enabled: true
+  promql-agent:
+    enabled: true
+  kgateway-agent:
+    enabled: false
+  istio-agent:
+    enabled: false
+  argo-rollouts-agent:
+    enabled: false
+  cilium-policy-agent:
+    enabled: false
+  cilium-manager-agent:
+    enabled: false
+  cilium-debug-agent:
+    enabled: false
+
+# MCP infrastructure
+kmcp:
+  enabled: true
+
+kagent-tools:
+  enabled: true
+
+# Disable tools we don't have configured
+tools:
+  grafana-mcp:
+    enabled: false
+  querydoc:
+    enabled: false
