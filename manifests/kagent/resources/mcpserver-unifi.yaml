@@ -9,7 +9,7 @@ spec:
     cmd: /opt/venv/bin/fastmcp
     args:
       - run
-      - src.main:mcp
+      - src/main.py:mcp
       - --transport
       - streamable-http
       - --host
