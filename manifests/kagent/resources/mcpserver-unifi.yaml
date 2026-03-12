@@ -6,17 +6,10 @@ metadata:
 spec:
   deployment:
     image: ghcr.io/enuno/unifi-mcp-server:0.2.4
-    cmd: /opt/venv/bin/fastmcp
+    cmd: /opt/venv/bin/python
     args:
-      - run
-      - src/main.py:mcp
-      - --transport
-      - streamable-http
-      - --host
-      - "0.0.0.0"
-      - --port
-      - "8000"
-      - --no-banner
+      - -c
+      - "from src.main import mcp; mcp.run(transport='streamable-http', host='0.0.0.0', port=8000)"
     port: 8000
     resources:
       requests:
