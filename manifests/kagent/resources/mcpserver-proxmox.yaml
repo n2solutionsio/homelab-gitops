@@ -9,7 +9,7 @@ spec:
     cmd: sh
     args:
       - -c
-      - "pip install -q -r /app/requirements.txt && python3 /app/mcp_server_stdio.py"
+      - "pip install -q --break-system-packages -r /app/requirements.txt && python3 /app/mcp_server_stdio.py"
     resources:
       requests:
         cpu: 50m
