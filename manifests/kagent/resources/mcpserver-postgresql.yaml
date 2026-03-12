@@ -1,0 +1,22 @@
+apiVersion: kagent.dev/v1alpha1
+kind: MCPServer
+metadata:
+  name: postgresql-mcp-server
+  namespace: kagent
+spec:
+  deployment:
+    image: crystaldba/postgres-mcp:v0.3.0
+    cmd: postgres-mcp
+    args:
+      - "--access-mode=restricted"
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+    secretRefs:
+      - name: postgresql-mcp-credentials
+  transportType: stdio
+  timeout: 30s
