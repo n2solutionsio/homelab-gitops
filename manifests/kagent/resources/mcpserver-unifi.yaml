@@ -1,0 +1,34 @@
+apiVersion: kagent.dev/v1alpha1
+kind: MCPServer
+metadata:
+  name: unifi-mcp-server
+  namespace: kagent
+spec:
+  deployment:
+    image: ghcr.io/enuno/unifi-mcp-server:0.2.4
+    cmd: /opt/venv/bin/python
+    args:
+      - -m
+      - src.main
+    env:
+      - name: UNIFI_API_TYPE
+        value: "local"
+      - name: UNIFI_LOCAL_HOST
+        value: "unifi-api.kagent.svc.cluster.local"
+      - name: UNIFI_LOCAL_PORT
+        value: "443"
+      - name: UNIFI_LOCAL_VERIFY_SSL
+        value: "false"
+      - name: LOG_LEVEL
+        value: "INFO"
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+    secretRefs:
+      - name: unifi-mcp-credentials
+  transportType: stdio
+  timeout: 30s
