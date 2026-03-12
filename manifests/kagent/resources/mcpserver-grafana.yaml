@@ -5,7 +5,7 @@ metadata:
   namespace: kagent
 spec:
   deployment:
-    image: grafana/mcp-grafana:latest
+    image: grafana/mcp-grafana:v0.8.2
     cmd: mcp-grafana
     args:
       - "--disable-write"
