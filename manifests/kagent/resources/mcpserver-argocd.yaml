@@ -1,0 +1,23 @@
+apiVersion: kagent.dev/v1alpha1
+kind: MCPServer
+metadata:
+  name: argocd-mcp-server
+  namespace: kagent
+spec:
+  deployment:
+    image: node:22-alpine
+    cmd: sh
+    args:
+      - -c
+      - "npm install -g argocd-mcp@0.5.0 --silent && argocd-mcp stdio"
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+    secretRefs:
+      - name: argocd-mcp-credentials
+  transportType: stdio
+  timeout: 30s
