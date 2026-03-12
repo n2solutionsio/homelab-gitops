@@ -6,7 +6,7 @@ metadata:
 spec:
   deployment:
     image: grafana/mcp-grafana:0.11.2-alpine
-    cmd: mcp-grafana
+    cmd: /app/mcp-grafana
     args:
       - "--disable-write"
       - "--disable-admin"
