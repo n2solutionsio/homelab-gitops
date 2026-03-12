@@ -5,11 +5,11 @@ metadata:
   namespace: kagent
 spec:
   deployment:
-    image: node:22-alpine
-    cmd: sh
+    image: ghcr.io/argoproj-labs/mcp-for-argocd:v0.5.0
+    cmd: node
     args:
-      - -c
-      - "npm install -g argocd-mcp@0.5.0 --silent && argocd-mcp stdio"
+      - /app/dist/index.js
+      - stdio
     resources:
       requests:
         cpu: 50m
