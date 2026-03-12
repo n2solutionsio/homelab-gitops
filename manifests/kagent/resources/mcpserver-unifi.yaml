@@ -20,4 +20,4 @@ spec:
     secretRefs:
       - name: unifi-mcp-credentials
   transportType: stdio
-  timeout: 30s
+  timeout: 90s
