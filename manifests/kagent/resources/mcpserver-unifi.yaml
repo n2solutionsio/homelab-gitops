@@ -10,17 +10,6 @@ spec:
     args:
       - -m
       - src.main
-    env:
-      - name: UNIFI_API_TYPE
-        value: "local"
-      - name: UNIFI_LOCAL_HOST
-        value: "unifi-api.kagent.svc.cluster.local"
-      - name: UNIFI_LOCAL_PORT
-        value: "443"
-      - name: UNIFI_LOCAL_VERIFY_SSL
-        value: "false"
-      - name: LOG_LEVEL
-        value: "INFO"
     resources:
       requests:
         cpu: 50m
