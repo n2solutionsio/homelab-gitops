@@ -1,0 +1,16 @@
+# Traefik IngressRoute to expose postgresql-mcp-server for Claude Code access.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: postgresql-mcp
+  namespace: kagent
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: "Host(`postgresql-mcp.homelab.n2solutions.io`)"
+      kind: Rule
+      services:
+        - name: postgresql-mcp-server
+          port: 8000
+  tls: {}

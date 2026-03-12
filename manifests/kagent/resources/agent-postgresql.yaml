@@ -1,0 +1,51 @@
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: postgresql-agent
+  namespace: kagent
+spec:
+  type: Declarative
+  description: "PostgreSQL database agent — schema inspection, query analysis, and health monitoring"
+  declarative:
+    modelConfig: default-model-config
+    a2aConfig:
+      skills:
+        - id: postgresql-database
+          name: PostgreSQL Database Management
+          description: "Inspect schemas, tables, query performance, and database health"
+          examples:
+            - "List all tables in the ai_org database"
+            - "Show the schema of the conversation_history table"
+            - "What are the slowest queries?"
+            - "Run a database health check"
+          tags: [postgresql, database, sql, homelab]
+    systemMessage: |
+      You are a PostgreSQL database agent for N2 Solutions infrastructure.
+
+      You have READ-ONLY access to the PostgreSQL cluster (restricted mode).
+
+      CONNECTED DATABASE: ai_org (Orchestrator database)
+      OTHER DATABASES ON THIS CLUSTER: kagent, content_metrics, n8n
+
+      RULES:
+      - Report database information concisely with real data
+      - Never attempt to modify data — you are in restricted (read-only) mode
+      - Use execute_sql for SELECT queries only
+      - Include specific numbers (row counts, sizes, performance metrics) in responses
+      - Flag any concerning metrics (slow queries, low cache hit rates, bloated tables)
+      - When asked about tables, always show column names, types, and constraints
+    tools:
+      - type: McpServer
+        mcpServer:
+          name: postgresql-mcp-server
+          kind: MCPServer
+          toolNames:
+            - list_schemas
+            - list_objects
+            - get_object_details
+            - execute_sql
+            - explain_query
+            - get_top_queries
+            - analyze_workload_indexes
+            - analyze_query_indexes
+            - analyze_db_health
