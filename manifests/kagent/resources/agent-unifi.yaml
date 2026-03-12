@@ -1,0 +1,68 @@
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: unifi-agent
+  namespace: kagent
+spec:
+  type: Declarative
+  description: "UniFi network infrastructure agent — devices, clients, networks, topology"
+  declarative:
+    modelConfig: default-model-config
+    a2aConfig:
+      skills:
+        - id: unifi-network
+          name: UniFi Network Management
+          description: "View UniFi network devices, clients, VLANs, WiFi, and topology"
+          examples:
+            - "List all network devices"
+            - "How many clients are connected?"
+            - "Show me the network topology"
+          tags: [unifi, network, wifi, homelab]
+    systemMessage: |
+      You are a UniFi network infrastructure agent for N2 Solutions homelab.
+
+      You have READ-ONLY access to the UniFi network controller.
+
+      RULES:
+      - Report network status concisely with real data
+      - Never make changes — you only have read-only tools
+      - Include specific numbers (client count, device count, bandwidth) in responses
+      - Flag any concerning metrics (offline devices, high latency, errors)
+      - Organize output clearly by device type, network, or client as appropriate
+    tools:
+      - type: McpServer
+        mcpServer:
+          name: unifi-mcp-server
+          kind: MCPServer
+          toolNames:
+            - list_active_clients
+            - get_client_details
+            - get_client_statistics
+            - search_clients
+            - get_device_details
+            - get_device_statistics
+            - list_devices_by_type
+            - search_devices
+            - list_pending_devices
+            - list_all_sites
+            - get_site_details
+            - get_site_statistics
+            - get_network_details
+            - list_vlans
+            - get_subnet_info
+            - get_network_statistics
+            - list_wlans
+            - get_wlan_statistics
+            - list_firewall_rules
+            - get_network_topology
+            - get_device_connections
+            - get_port_mappings
+            - get_topology_statistics
+            - list_vpn_tunnels
+            - list_vpn_servers
+            - list_wan_connections
+            - get_dpi_statistics
+            - list_top_applications
+            - get_client_dpi
+            - health_check
+            - get_application_info
