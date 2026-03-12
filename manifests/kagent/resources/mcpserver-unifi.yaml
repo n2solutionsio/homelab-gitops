@@ -6,10 +6,18 @@ metadata:
 spec:
   deployment:
     image: ghcr.io/enuno/unifi-mcp-server:0.2.4
-    cmd: /opt/venv/bin/python
+    cmd: /opt/venv/bin/fastmcp
     args:
-      - -m
-      - src.main
+      - run
+      - src.main:mcp
+      - --transport
+      - streamable-http
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --no-banner
+    port: 8000
     resources:
       requests:
         cpu: 50m
@@ -19,5 +27,8 @@ spec:
         memory: 256Mi
     secretRefs:
       - name: unifi-mcp-credentials
-  transportType: stdio
+  transportType: http
+  httpTransport:
+    targetPort: 8000
+    path: /mcp/
   timeout: 90s
