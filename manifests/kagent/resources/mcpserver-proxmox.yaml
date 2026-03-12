@@ -1,0 +1,19 @@
+apiVersion: kagent.dev/v1alpha1
+kind: MCPServer
+metadata:
+  name: proxmox-mcp-server
+  namespace: kagent
+spec:
+  deployment:
+    image: ghcr.io/puregrain/proxmox-emcp:latest
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+    secretRefs:
+      - name: proxmox-mcp-credentials
+  transportType: STDIO
+  timeout: 30s

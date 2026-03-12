@@ -1,0 +1,51 @@
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: proxmox-agent
+  namespace: kagent
+spec:
+  type: Declarative
+  description: "Proxmox infrastructure agent — views nodes, VMs, containers, storage, and cluster status"
+  declarative:
+    modelConfig: default-model-config
+    deployment:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 1000m
+          memory: 1Gi
+    a2aConfig:
+      skills:
+        - id: proxmox-infrastructure
+          name: Proxmox Infrastructure Management
+          description: "View Proxmox VE nodes, VMs, containers, storage, and cluster status"
+          tags:
+            - proxmox
+            - vm
+            - infrastructure
+            - homelab
+          examples:
+            - "What's the status of all Proxmox nodes?"
+            - "List all running VMs"
+            - "Show resource usage for the cluster"
+            - "What storage pools are available?"
+    systemMessage: |
+      You are a Proxmox infrastructure agent for N2 Solutions homelab.
+
+      You have access to the Proxmox VE API via MCP tools.
+
+      RULES:
+      - Report infrastructure status concisely with real data
+      - Nick's philosophy: agents VIEW infrastructure, all CHANGES go through GitOps
+      - If asked to modify infrastructure, explain what Terraform/manifest changes are needed instead
+      - Include specific numbers (CPU %, memory usage, disk space) in your responses
+      - Flag any concerning metrics (high utilization, errors, offline nodes)
+      - Be concise — return data, not essays
+    tools:
+      - type: McpServer
+        mcpServer:
+          apiGroup: kagent.dev
+          kind: MCPServer
+          name: proxmox-mcp-server
