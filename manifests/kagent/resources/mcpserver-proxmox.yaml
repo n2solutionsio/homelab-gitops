@@ -6,6 +6,9 @@ metadata:
 spec:
   deployment:
     image: puregrain/proxmox-emcp:latest
+    cmd: python3
+    args:
+      - mcp_server_stdio.py
     resources:
       requests:
         cpu: 50m
