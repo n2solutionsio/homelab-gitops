@@ -5,7 +5,7 @@ metadata:
   namespace: kagent
 spec:
   deployment:
-    image: crystaldba/postgres-mcp:v0.3.0
+    image: crystaldba/postgres-mcp:0.3.0
     cmd: postgres-mcp
     args:
       - "--access-mode=restricted"
