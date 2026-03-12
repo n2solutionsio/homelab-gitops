@@ -1,0 +1,19 @@
+# Traefik IngressRoute to expose argocd-mcp-server for Claude Code access.
+# kMCP creates a Service named after the MCPServer CRD — verify the actual
+# service name and port after deployment with:
+#   kubectl get svc -n kagent | grep argocd
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: argocd-mcp
+  namespace: kagent
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: "Host(`argocd-mcp.homelab.n2solutions.io`)"
+      kind: Rule
+      services:
+        - name: argocd-mcp-server
+          port: 8000
+  tls: {}
