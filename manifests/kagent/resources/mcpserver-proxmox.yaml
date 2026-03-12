@@ -5,7 +5,7 @@ metadata:
   namespace: kagent
 spec:
   deployment:
-    image: ghcr.io/puregrain/proxmox-emcp:latest
+    image: puregrain/proxmox-emcp:latest
     resources:
       requests:
         cpu: 50m
