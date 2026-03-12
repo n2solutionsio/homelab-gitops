@@ -1,0 +1,23 @@
+apiVersion: kagent.dev/v1alpha1
+kind: MCPServer
+metadata:
+  name: grafana-mcp-server
+  namespace: kagent
+spec:
+  deployment:
+    image: grafana/mcp-grafana:v0.8.2
+    cmd: mcp-grafana
+    args:
+      - "--disable-write"
+      - "--disable-admin"
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+    secretRefs:
+      - name: grafana-mcp-credentials
+  transportType: stdio
+  timeout: 30s

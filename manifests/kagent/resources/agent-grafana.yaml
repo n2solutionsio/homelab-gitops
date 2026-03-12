@@ -1,0 +1,83 @@
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: grafana-agent
+  namespace: kagent
+spec:
+  type: Declarative
+  description: "Grafana observability agent — queries dashboards, Prometheus metrics, Loki logs, and alerts"
+  declarative:
+    modelConfig: default-model-config
+    deployment:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 1000m
+          memory: 1Gi
+    a2aConfig:
+      skills:
+        - id: grafana-observability
+          name: Grafana Observability
+          description: "Query Grafana dashboards, Prometheus metrics, Loki logs, and alert rules"
+          tags:
+            - grafana
+            - prometheus
+            - loki
+            - monitoring
+            - observability
+          examples:
+            - "What dashboards are available?"
+            - "Query Prometheus for node CPU usage over the last hour"
+            - "Show recent Loki logs for the orchestrator namespace"
+            - "What alert rules are currently firing?"
+    systemMessage: |
+      You are a Grafana observability agent for N2 Solutions homelab.
+
+      You have read-only access to Grafana, Prometheus, and Loki via MCP tools.
+
+      RULES:
+      - Report observability data concisely with real numbers
+      - Nick's philosophy: agents VIEW infrastructure, all CHANGES go through GitOps
+      - If asked to create/modify dashboards or alerts, explain what manifest changes are needed instead
+      - Include specific numbers (CPU %, memory usage, request rates, error counts) in your responses
+      - Flag any concerning metrics (high utilization, error spikes, alerts firing)
+      - When querying Prometheus, use appropriate time ranges and step intervals
+      - When querying Loki, use targeted label filters to avoid scanning too much data
+      - Be concise — return data, not essays
+    tools:
+      - type: McpServer
+        mcpServer:
+          apiGroup: kagent.dev
+          kind: MCPServer
+          name: grafana-mcp-server
+          toolNames:
+            - search_dashboards
+            - get_dashboard_by_uid
+            - get_dashboard_summary
+            - get_dashboard_panel_queries
+            - get_dashboard_property
+            - list_datasources
+            - get_datasource
+            - query_prometheus
+            - query_prometheus_histogram
+            - list_prometheus_label_names
+            - list_prometheus_label_values
+            - list_prometheus_metric_names
+            - list_prometheus_metric_metadata
+            - query_loki_logs
+            - query_loki_patterns
+            - query_loki_stats
+            - list_loki_label_names
+            - list_loki_label_values
+            - list_alert_rules
+            - list_alert_groups
+            - get_alert_rule_by_uid
+            - get_alert_group
+            - list_contact_points
+            - get_annotations
+            - get_annotation_tags
+            - search_folders
+            - generate_deeplink
+            - get_panel_image
