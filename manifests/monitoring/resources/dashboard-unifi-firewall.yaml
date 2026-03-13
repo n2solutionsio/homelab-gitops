@@ -327,6 +327,12 @@ data:
             },
             "overrides": [
               {
+                "matcher": { "id": "byName", "options": "Time" },
+                "properties": [
+                  { "id": "custom.hidden", "value": true }
+                ]
+              },
+              {
                 "matcher": { "id": "byName", "options": "src" },
                 "properties": [
                   { "id": "displayName", "value": "Source IP" },
@@ -334,7 +340,7 @@ data:
                 ]
               },
               {
-                "matcher": { "id": "byName", "options": "Value" },
+                "matcher": { "id": "byRegexp", "options": "/Value.*/" },
                 "properties": [
                   { "id": "displayName", "value": "Blocked Count" }
                 ]
@@ -386,14 +392,21 @@ data:
             },
             "overrides": [
               {
-                "matcher": { "id": "byName", "options": "dpt" },
+                "matcher": { "id": "byName", "options": "Time" },
                 "properties": [
-                  { "id": "displayName", "value": "Port" },
-                  { "id": "custom.width", "value": 100 }
+                  { "id": "custom.hidden", "value": true }
                 ]
               },
               {
-                "matcher": { "id": "byName", "options": "Value" },
+                "matcher": { "id": "byName", "options": "dpt" },
+                "properties": [
+                  { "id": "displayName", "value": "Port" },
+                  { "id": "custom.width", "value": 100 },
+                  { "id": "unit", "value": "none" }
+                ]
+              },
+              {
+                "matcher": { "id": "byRegexp", "options": "/Value.*/" },
                 "properties": [
                   { "id": "displayName", "value": "Hit Count" }
                 ]
