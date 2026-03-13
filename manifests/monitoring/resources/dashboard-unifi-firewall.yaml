@@ -256,6 +256,12 @@ data:
             },
             "overrides": [
               {
+                "matcher": { "id": "byName", "options": "Time" },
+                "properties": [
+                  { "id": "custom.hidden", "value": true }
+                ]
+              },
+              {
                 "matcher": { "id": "byName", "options": "geoip_country_name" },
                 "properties": [
                   { "id": "displayName", "value": "Country" },
@@ -263,7 +269,7 @@ data:
                 ]
               },
               {
-                "matcher": { "id": "byName", "options": "Value" },
+                "matcher": { "id": "byRegexp", "options": "/Value.*/" },
                 "properties": [
                   { "id": "displayName", "value": "Blocked" }
                 ]

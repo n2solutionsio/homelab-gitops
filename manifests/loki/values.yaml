@@ -20,6 +20,7 @@ loki:
   limits_config:
     retention_period: 360h
     allow_structured_metadata: true
+    max_query_series: 5000
   compactor:
     retention_enabled: true
     delete_request_store: filesystem
