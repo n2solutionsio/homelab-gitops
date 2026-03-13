@@ -108,6 +108,7 @@ grafana:
   sidecar:
     dashboards:
       searchNamespace: ALL
+      folderAnnotation: grafana_folder
   admin:
     existingSecret: grafana-admin
     userKey: admin-user
