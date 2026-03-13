@@ -145,11 +145,9 @@ data:
           "transformations": [
             {
               "id": "labelsToFields",
-              "options": {}
-            },
-            {
-              "id": "merge",
-              "options": {}
+              "options": {
+                "mode": "columns"
+              }
             },
             {
               "id": "convertFieldType",
