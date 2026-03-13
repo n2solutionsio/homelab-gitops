@@ -182,8 +182,17 @@ data:
               "zoom": 2
             },
             "basemap": {
-              "type": "default",
-              "name": "OpenStreetMap"
+              "config": {},
+              "name": "Layer 0",
+              "type": "default"
+            },
+            "controls": {
+              "mouseWheelZoom": true,
+              "showAttribution": true,
+              "showDebug": false,
+              "showMeasure": false,
+              "showScale": false,
+              "showZoom": true
             },
             "layers": [
               {
@@ -191,20 +200,16 @@ data:
                 "name": "Attacks",
                 "config": {
                   "showLegend": true,
-                  "style": {
-                    "size": {
-                      "fixed": 10
-                    },
-                    "color": {
-                      "fixed": "red"
-                    },
-                    "opacity": 1,
-                    "symbol": "circle",
-                    "symbolAlign": {
-                      "horizontal": "center",
-                      "vertical": "center"
-                    }
-                  }
+                  "shape": "circle",
+                  "size": {
+                    "fixed": 5,
+                    "min": 2,
+                    "max": 15
+                  },
+                  "color": {
+                    "fixed": "red"
+                  },
+                  "fillOpacity": 0.4
                 },
                 "location": {
                   "mode": "coords",
