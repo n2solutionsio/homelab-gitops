@@ -142,6 +142,24 @@ data:
               "instant": true
             }
           ],
+          "transformations": [
+            {
+              "id": "labelsToFields",
+              "options": {
+                "mode": "columns"
+              }
+            },
+            {
+              "id": "convertFieldType",
+              "options": {
+                "conversions": [
+                  { "targetField": "geoip_location_latitude", "destinationType": "number" },
+                  { "targetField": "geoip_location_longitude", "destinationType": "number" }
+                ],
+                "fields": {}
+              }
+            }
+          ],
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "continuous-RdYlGr" },
