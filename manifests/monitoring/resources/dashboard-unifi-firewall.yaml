@@ -144,11 +144,11 @@ data:
           ],
           "transformations": [
             {
-              "id": "seriesToRows",
+              "id": "labelsToFields",
               "options": {}
             },
             {
-              "id": "labelsToFields",
+              "id": "merge",
               "options": {}
             }
           ],
