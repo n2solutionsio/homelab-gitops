@@ -136,7 +136,7 @@ data:
           "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
           "targets": [
             {
-              "expr": "sum by (geoip_country_name, geoip_country_code) (count_over_time({job=\"syslog\"} |= \"WAN_LOCAL\" |= \"-D-\" | geoip_country_name != \"\" [$__range]))",
+              "expr": "sum by (geoip_country_name, geoip_location_latitude, geoip_location_longitude) (count_over_time({job=\"syslog\"} |= \"WAN_LOCAL\" |= \"-D-\" | geoip_country_name != \"\" [$__range]))",
               "legendFormat": "{{geoip_country_name}}",
               "refId": "A",
               "instant": true
@@ -150,11 +150,21 @@ data:
             {
               "id": "merge",
               "options": {}
+            },
+            {
+              "id": "convertFieldType",
+              "options": {
+                "conversions": [
+                  { "targetField": "geoip_location_latitude", "destinationType": "number" },
+                  { "targetField": "geoip_location_longitude", "destinationType": "number" }
+                ],
+                "fields": {}
+              }
             }
           ],
           "fieldConfig": {
             "defaults": {
-              "color": { "mode": "continuous-RdYlGr" },
+              "color": { "mode": "fixed", "fixedColor": "red" },
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
@@ -185,14 +195,12 @@ data:
                   "showLegend": true,
                   "style": {
                     "size": {
-                      "field": "Value",
-                      "min": 5,
-                      "max": 25
+                      "fixed": 10
                     },
                     "color": {
-                      "field": "Value"
+                      "fixed": "red"
                     },
-                    "opacity": 0.7,
+                    "opacity": 1,
                     "symbol": "circle",
                     "symbolAlign": {
                       "horizontal": "center",
@@ -201,9 +209,9 @@ data:
                   }
                 },
                 "location": {
-                  "mode": "lookup",
-                  "lookup": "geoip_country_code",
-                  "gazetteer": "public/gazetteer/countries.json"
+                  "mode": "coords",
+                  "latitude": "geoip_location_latitude",
+                  "longitude": "geoip_location_longitude"
                 }
               }
             ],
