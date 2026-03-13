@@ -144,10 +144,12 @@ data:
           ],
           "transformations": [
             {
+              "id": "seriesToRows",
+              "options": {}
+            },
+            {
               "id": "labelsToFields",
-              "options": {
-                "mode": "columns"
-              }
+              "options": {}
             }
           ],
           "fieldConfig": {
