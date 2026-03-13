@@ -10,12 +10,9 @@ auth:
   secretKeys:
     adminPasswordKey: password
 
-# Expose via NodePort for local MCP/psql access from Mac
+# ClusterIP only — all consumers are in-cluster (kagent MCP, Orchestrator)
+# For ad-hoc access: kubectl port-forward svc/postgresql 5432:5432 -n postgresql
 primary:
-  service:
-    type: NodePort
-    nodePorts:
-      postgresql: 30432
   persistence:
     enabled: true
     storageClass: nfs-client
