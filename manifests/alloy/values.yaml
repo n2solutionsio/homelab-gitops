@@ -2,10 +2,38 @@
 
 controller:
   type: daemonset
+  initContainers:
+    - name: geoip-download
+      image: curlimages/curl:8.7.1
+      command: ['sh', '-c']
+      args:
+        - |
+          curl -sSfL -o /geoip/GeoLite2-City.tar.gz \
+            "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=${MAXMIND_LICENSE_KEY}&suffix=tar.gz" && \
+          tar -xzf /geoip/GeoLite2-City.tar.gz -C /geoip --strip-components=1 && \
+          rm /geoip/GeoLite2-City.tar.gz && \
+          ls -la /geoip/GeoLite2-City.mmdb
+      env:
+        - name: MAXMIND_LICENSE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: maxmind-license
+              key: license-key
+      volumeMounts:
+        - name: geoip
+          mountPath: /geoip
+  volumes:
+    extra:
+      - name: geoip
+        emptyDir: {}
 
 alloy:
   mounts:
     varlog: true
+    extra:
+      - name: geoip
+        mountPath: /geoip
+        readOnly: true
   configMap:
     content: |
       // Find all pod log files on this node
@@ -50,6 +78,35 @@ alloy:
           syslog_format = "rfc3164"
           labels        = { job = "syslog" }
         }
+        forward_to = [loki.process.syslog_geoip.receiver]
+      }
+
+      // Enrich firewall logs with GeoIP data from MaxMind
+      loki.process "syslog_geoip" {
+        // Extract source IP from firewall log lines (SRC=x.x.x.x)
+        stage.regex {
+          expression = "SRC=(?P<src_ip>[\\d.]+)"
+        }
+
+        // Look up IP in MaxMind GeoLite2-City database
+        stage.geoip {
+          source  = "src_ip"
+          db      = "/geoip/GeoLite2-City.mmdb"
+          db_type = "city"
+        }
+
+        // Attach geo fields as structured metadata (not labels — avoids cardinality explosion)
+        stage.structured_metadata {
+          values = {
+            geoip_country_name       = "",
+            geoip_country_code       = "",
+            geoip_city_name          = "",
+            geoip_location_latitude  = "",
+            geoip_location_longitude = "",
+            geoip_continent_name     = "",
+          }
+        }
+
         forward_to = [loki.write.loki.receiver]
       }
 

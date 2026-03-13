@@ -16,7 +16,7 @@ data:
       "tags": ["unifi", "firewall", "security", "network"],
       "timezone": "browser",
       "schemaVersion": 39,
-      "version": 1,
+      "version": 2,
       "editable": true,
       "time": {
         "from": "now-6h",
@@ -124,15 +124,137 @@ data:
         },
         {
           "type": "row",
-          "title": "Top Offenders",
+          "title": "Geographic Origin",
           "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 },
+          "collapsed": false
+        },
+        {
+          "type": "geomap",
+          "title": "Attack Origin Map",
+          "description": "Geographic origin of blocked WAN connections — powered by MaxMind GeoLite2",
+          "gridPos": { "h": 8, "w": 16, "x": 0, "y": 10 },
+          "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+          "targets": [
+            {
+              "expr": "sum by (geoip_country_name, geoip_city_name, geoip_location_latitude, geoip_location_longitude) (count_over_time({job=\"syslog\"} |= \"WAN_LOCAL\" |= \"-D-\" | geoip_country_name != \"\" [$__range]))",
+              "legendFormat": "{{geoip_city_name}}, {{geoip_country_name}}",
+              "refId": "A",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "continuous-RdYlGr" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 50 },
+                  { "color": "red", "value": 500 }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "view": {
+              "id": "coords",
+              "lat": 30,
+              "lon": 0,
+              "zoom": 2
+            },
+            "basemap": {
+              "type": "default",
+              "name": "OpenStreetMap"
+            },
+            "layers": [
+              {
+                "type": "markers",
+                "name": "Attacks",
+                "config": {
+                  "showLegend": true,
+                  "style": {
+                    "size": {
+                      "field": "Value",
+                      "min": 3,
+                      "max": 20
+                    },
+                    "color": {
+                      "field": "Value"
+                    },
+                    "opacity": 0.7,
+                    "symbol": "circle",
+                    "symbolAlign": {
+                      "horizontal": "center",
+                      "vertical": "center"
+                    }
+                  }
+                },
+                "location": {
+                  "mode": "coords",
+                  "latitude": "geoip_location_latitude",
+                  "longitude": "geoip_location_longitude"
+                }
+              }
+            ],
+            "tooltip": {
+              "mode": "details"
+            }
+          }
+        },
+        {
+          "type": "bargauge",
+          "title": "Top Countries",
+          "description": "Top 10 countries by blocked connection count",
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 10 },
+          "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+          "targets": [
+            {
+              "expr": "topk(10, sum by (geoip_country_name) (count_over_time({job=\"syslog\"} |= \"WAN_LOCAL\" |= \"-D-\" | geoip_country_name != \"\" [$__range])))",
+              "legendFormat": "{{geoip_country_name}}",
+              "refId": "A",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "short",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 100 },
+                  { "color": "red", "value": 500 }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "gradient",
+            "reduceOptions": {
+              "calcs": ["sum"],
+              "fields": "",
+              "values": false
+            },
+            "showUnfilled": true,
+            "namePlacement": "auto",
+            "valueMode": "color"
+          }
+        },
+        {
+          "type": "row",
+          "title": "Top Offenders",
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 },
           "collapsed": false
         },
         {
           "type": "table",
           "title": "Top Source IPs",
           "description": "Top 20 external IPs hitting the firewall — likely scanners, bots, or probes",
-          "gridPos": { "h": 10, "w": 12, "x": 0, "y": 10 },
+          "gridPos": { "h": 10, "w": 12, "x": 0, "y": 19 },
           "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
           "targets": [
             {
@@ -191,7 +313,7 @@ data:
           "type": "bargauge",
           "title": "Top Probed Ports",
           "description": "Most frequently targeted destination ports — common targets: 22 (SSH), 23 (Telnet), 80/443 (HTTP/S), 3389 (RDP)",
-          "gridPos": { "h": 10, "w": 12, "x": 12, "y": 10 },
+          "gridPos": { "h": 10, "w": 12, "x": 12, "y": 19 },
           "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
           "targets": [
             {
@@ -234,14 +356,14 @@ data:
         {
           "type": "row",
           "title": "Rule Analysis",
-          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 20 },
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 29 },
           "collapsed": false
         },
         {
           "type": "bargauge",
           "title": "Rule Hit Breakdown",
           "description": "Which firewall rules are being triggered most — helps identify noisy rules or policy gaps",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 21 },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 30 },
           "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
           "targets": [
             {
@@ -275,7 +397,7 @@ data:
           "type": "timeseries",
           "title": "SYN Scan Detection",
           "description": "TCP SYN packets with no established connection — classic port scan signature",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 21 },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 30 },
           "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
           "targets": [
             {
@@ -318,14 +440,14 @@ data:
         {
           "type": "row",
           "title": "Internal Traffic",
-          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 29 },
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 38 },
           "collapsed": false
         },
         {
           "type": "table",
           "title": "Inter-VLAN Traffic",
           "description": "Allowed return traffic between VLANs — shows which interfaces and protocols are active",
-          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 30 },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 39 },
           "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
           "targets": [
             {
@@ -385,14 +507,14 @@ data:
         {
           "type": "row",
           "title": "Live Logs",
-          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 38 },
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 47 },
           "collapsed": false
         },
         {
           "type": "logs",
           "title": "Recent Blocked Connections",
           "description": "Live stream of dropped WAN traffic — raw syslog lines from UDM Pro",
-          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 39 },
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 48 },
           "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
           "targets": [
             {
