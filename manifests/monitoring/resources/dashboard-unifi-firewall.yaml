@@ -464,14 +464,21 @@ data:
             },
             "overrides": [
               {
-                "matcher": { "id": "byName", "options": "rule" },
+                "matcher": { "id": "byName", "options": "Time" },
                 "properties": [
-                  { "id": "displayName", "value": "Firewall Rule" },
-                  { "id": "custom.width", "value": 250 }
+                  { "id": "custom.hidden", "value": true }
                 ]
               },
               {
-                "matcher": { "id": "byName", "options": "Value" },
+                "matcher": { "id": "byName", "options": "rule" },
+                "properties": [
+                  { "id": "displayName", "value": "Firewall Rule" },
+                  { "id": "custom.width", "value": 250 },
+                  { "id": "unit", "value": "none" }
+                ]
+              },
+              {
+                "matcher": { "id": "byRegexp", "options": "/Value.*/" },
                 "properties": [
                   { "id": "displayName", "value": "Hit Count" }
                 ]
@@ -564,6 +571,12 @@ data:
             },
             "overrides": [
               {
+                "matcher": { "id": "byName", "options": "Time" },
+                "properties": [
+                  { "id": "custom.hidden", "value": true }
+                ]
+              },
+              {
                 "matcher": { "id": "byName", "options": "iface" },
                 "properties": [
                   { "id": "displayName", "value": "Interface" },
@@ -578,11 +591,17 @@ data:
               {
                 "matcher": { "id": "byName", "options": "proto" },
                 "properties": [
-                  { "id": "displayName", "value": "Protocol" }
+                  { "id": "displayName", "value": "Protocol" },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      { "type": "value", "options": { "2": { "text": "IGMP" } } }
+                    ]
+                  }
                 ]
               },
               {
-                "matcher": { "id": "byName", "options": "Value" },
+                "matcher": { "id": "byRegexp", "options": "/Value.*/" },
                 "properties": [
                   { "id": "displayName", "value": "Packet Count" }
                 ]
