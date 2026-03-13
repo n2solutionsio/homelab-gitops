@@ -1,0 +1,415 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-unifi-firewall
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: "Network Security"
+data:
+  unifi-firewall.json: |
+    {
+      "uid": "unifi-firewall-activity",
+      "title": "UDM Pro Firewall Activity",
+      "description": "UDM Pro firewall logs from syslog — WAN probes, blocked connections, inter-VLAN traffic",
+      "tags": ["unifi", "firewall", "security", "network"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "editable": true,
+      "time": {
+        "from": "now-6h",
+        "to": "now"
+      },
+      "refresh": "1m",
+      "templating": {
+        "list": [
+          {
+            "name": "DS_LOKI",
+            "type": "datasource",
+            "query": "loki",
+            "current": {},
+            "hide": 0,
+            "includeAll": false,
+            "multi": false,
+            "options": [],
+            "refresh": 1,
+            "regex": "",
+            "skipUrlSync": false
+          }
+        ]
+      },
+      "panels": [
+        {
+          "type": "row",
+          "title": "WAN Security Overview",
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+          "collapsed": false
+        },
+        {
+          "type": "timeseries",
+          "title": "WAN Blocked Rate",
+          "description": "Rate of dropped packets on WAN interface — external probes, port scans, and blocked connections",
+          "gridPos": { "h": 8, "w": 16, "x": 0, "y": 1 },
+          "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+          "targets": [
+            {
+              "expr": "sum(count_over_time({job=\"syslog\"} |= \"WAN_LOCAL\" |= \"-D-\" [$__interval]))",
+              "legendFormat": "Blocked packets",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "fixed", "fixedColor": "red" },
+              "custom": {
+                "drawStyle": "bars",
+                "fillOpacity": 30,
+                "lineWidth": 1,
+                "pointSize": 5,
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": { "mode": "none" },
+                "axisPlacement": "auto",
+                "gradientMode": "scheme"
+              },
+              "unit": "short",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 50 },
+                  { "color": "red", "value": 200 }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "tooltip": { "mode": "single" },
+            "legend": { "displayMode": "list", "placement": "bottom" }
+          }
+        },
+        {
+          "type": "piechart",
+          "title": "Protocol Breakdown",
+          "description": "Distribution of blocked traffic by protocol (TCP, UDP, ICMP, etc.)",
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 1 },
+          "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+          "targets": [
+            {
+              "expr": "sum by (proto) (count_over_time({job=\"syslog\"} |= \"WAN_LOCAL\" |= \"-D-\" | regexp \"PROTO=(?P<proto>\\\\S+)\" [$__range]))",
+              "legendFormat": "{{proto}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": { "displayMode": "list", "placement": "right" },
+            "pieType": "donut",
+            "reduceOptions": {
+              "calcs": ["sum"],
+              "fields": "",
+              "values": false
+            },
+            "tooltip": { "mode": "single" }
+          }
+        },
+        {
+          "type": "row",
+          "title": "Top Offenders",
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 },
+          "collapsed": false
+        },
+        {
+          "type": "table",
+          "title": "Top Source IPs",
+          "description": "Top 20 external IPs hitting the firewall — likely scanners, bots, or probes",
+          "gridPos": { "h": 10, "w": 12, "x": 0, "y": 10 },
+          "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+          "targets": [
+            {
+              "expr": "topk(20, sum by (src) (count_over_time({job=\"syslog\"} |= \"WAN_LOCAL\" |= \"-D-\" | regexp \"SRC=(?P<src>\\\\S+)\" [$__range])))",
+              "legendFormat": "",
+              "refId": "A",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 50 },
+                  { "color": "orange", "value": 200 },
+                  { "color": "red", "value": 500 }
+                ]
+              },
+              "custom": {
+                "displayMode": "color-background-solid",
+                "align": "auto"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "src" },
+                "properties": [
+                  { "id": "displayName", "value": "Source IP" },
+                  { "id": "custom.width", "value": 200 }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Value" },
+                "properties": [
+                  { "id": "displayName", "value": "Blocked Count" }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "sortBy": [{ "displayName": "Blocked Count", "desc": true }],
+            "footer": { "enablePagination": true }
+          },
+          "transformations": [
+            {
+              "id": "sortBy",
+              "options": { "sort": [{ "field": "Value", "desc": true }] }
+            }
+          ]
+        },
+        {
+          "type": "bargauge",
+          "title": "Top Probed Ports",
+          "description": "Most frequently targeted destination ports — common targets: 22 (SSH), 23 (Telnet), 80/443 (HTTP/S), 3389 (RDP)",
+          "gridPos": { "h": 10, "w": 12, "x": 12, "y": 10 },
+          "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+          "targets": [
+            {
+              "expr": "topk(20, sum by (dpt) (count_over_time({job=\"syslog\"} |= \"WAN_LOCAL\" |= \"-D-\" |= \"DPT=\" | regexp \"DPT=(?P<dpt>\\\\S+)\" [$__range])))",
+              "legendFormat": "{{dpt}}",
+              "refId": "A",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "continuous-BlYlRd" },
+              "unit": "short",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "blue", "value": null },
+                  { "color": "yellow", "value": 100 },
+                  { "color": "red", "value": 500 }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "gradient",
+            "reduceOptions": {
+              "calcs": ["sum"],
+              "fields": "",
+              "values": false
+            },
+            "showUnfilled": true,
+            "minVizWidth": 8,
+            "minVizHeight": 16,
+            "namePlacement": "auto",
+            "valueMode": "color"
+          }
+        },
+        {
+          "type": "row",
+          "title": "Rule Analysis",
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 20 },
+          "collapsed": false
+        },
+        {
+          "type": "bargauge",
+          "title": "Rule Hit Breakdown",
+          "description": "Which firewall rules are being triggered most — helps identify noisy rules or policy gaps",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 21 },
+          "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+          "targets": [
+            {
+              "expr": "topk(10, sum by (rule) (count_over_time({job=\"syslog\"} |~ \"\\\\[.*-[DR]-\" | regexp \"\\\\[(?P<rule>[^\\\\]]+)\\\\]\" [$__range])))",
+              "legendFormat": "{{rule}}",
+              "refId": "A",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "gradient",
+            "reduceOptions": {
+              "calcs": ["sum"],
+              "fields": "",
+              "values": false
+            },
+            "showUnfilled": true,
+            "namePlacement": "auto",
+            "valueMode": "color"
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "SYN Scan Detection",
+          "description": "TCP SYN packets with no established connection — classic port scan signature",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 21 },
+          "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+          "targets": [
+            {
+              "expr": "sum(count_over_time({job=\"syslog\"} |= \"WAN_LOCAL\" |= \"-D-\" |= \"PROTO=TCP\" |= \"SYN URGP\" [$__interval]))",
+              "legendFormat": "SYN scans",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "fixed", "fixedColor": "orange" },
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 15,
+                "lineWidth": 2,
+                "pointSize": 5,
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": { "mode": "none" },
+                "axisPlacement": "auto",
+                "gradientMode": "scheme"
+              },
+              "unit": "short",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "orange", "value": 100 },
+                  { "color": "red", "value": 500 }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "tooltip": { "mode": "single" },
+            "legend": { "displayMode": "list", "placement": "bottom" }
+          }
+        },
+        {
+          "type": "row",
+          "title": "Internal Traffic",
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 29 },
+          "collapsed": false
+        },
+        {
+          "type": "table",
+          "title": "Inter-VLAN Traffic",
+          "description": "Allowed return traffic between VLANs — shows which interfaces and protocols are active",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 30 },
+          "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+          "targets": [
+            {
+              "expr": "sum by (iface, proto) (count_over_time({job=\"syslog\"} |= \"LAN_LOCAL\" |= \"-RET-\" | regexp \"IN=(?P<iface>\\\\S+).*PROTO=(?P<proto>\\\\S+)\" [$__range]))",
+              "legendFormat": "",
+              "refId": "A",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "displayMode": "auto",
+                "align": "auto"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "iface" },
+                "properties": [
+                  { "id": "displayName", "value": "Interface" },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      { "type": "value", "options": { "eth8": { "text": "WAN (eth8)" }, "br0": { "text": "Main LAN (br0)" }, "br10": { "text": "VLAN 10 (br10)" }, "br20": { "text": "VLAN 20 (br20)" }, "br30": { "text": "Infrastructure (br30)" }, "br40": { "text": "VLAN 40 (br40)" }, "br50": { "text": "VLAN 50 (br50)" } } }
+                    ]
+                  }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "proto" },
+                "properties": [
+                  { "id": "displayName", "value": "Protocol" }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Value" },
+                "properties": [
+                  { "id": "displayName", "value": "Packet Count" }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "sortBy": [{ "displayName": "Packet Count", "desc": true }],
+            "footer": { "enablePagination": false }
+          },
+          "transformations": [
+            {
+              "id": "sortBy",
+              "options": { "sort": [{ "field": "Value", "desc": true }] }
+            }
+          ]
+        },
+        {
+          "type": "row",
+          "title": "Live Logs",
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 38 },
+          "collapsed": false
+        },
+        {
+          "type": "logs",
+          "title": "Recent Blocked Connections",
+          "description": "Live stream of dropped WAN traffic — raw syslog lines from UDM Pro",
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 39 },
+          "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+          "targets": [
+            {
+              "expr": "{job=\"syslog\"} |= \"WAN_LOCAL\" |= \"-D-\"",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "showTime": true,
+            "showLabels": false,
+            "showCommonLabels": false,
+            "wrapLogMessage": true,
+            "prettifyLogMessage": false,
+            "enableLogDetails": true,
+            "sortOrder": "Descending",
+            "dedupStrategy": "none"
+          }
+        }
+      ]
+    }
