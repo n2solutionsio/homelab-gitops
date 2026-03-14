@@ -9,7 +9,7 @@ spec:
   project: default
   sources:
     - repoURL: https://grafana.github.io/helm-charts
-      targetRevision: 1.6.1
+      targetRevision: 1.6.2
       chart: alloy
       helm:
         valueFiles:
