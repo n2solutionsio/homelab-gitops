@@ -1,0 +1,157 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: homelab-alerts
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: homelab-node-resources
+      rules:
+        # Node memory pressure — warning at 80%, critical at 90%
+        - alert: NodeMemoryHigh
+          expr: |
+            (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 80
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            description: >-
+              Node {{ $labels.instance }} memory usage is {{ printf "%.1f" $value }}%
+              (threshold: 80%).
+
+        - alert: NodeMemoryCritical
+          expr: |
+            (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 90
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            description: >-
+              Node {{ $labels.instance }} memory usage is {{ printf "%.1f" $value }}%
+              (threshold: 90%). Risk of OOMKill.
+
+        # Node CPU pressure — warning at 85%, critical at 95%
+        - alert: NodeCPUHigh
+          expr: |
+            100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            description: >-
+              Node {{ $labels.instance }} CPU usage is {{ printf "%.1f" $value }}%
+              sustained for 10m (threshold: 85%).
+
+        - alert: NodeCPUCritical
+          expr: |
+            100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 95
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            description: >-
+              Node {{ $labels.instance }} CPU usage is {{ printf "%.1f" $value }}%
+              sustained for 5m (threshold: 95%).
+
+        # Node disk pressure — warning at 80%, critical at 90%
+        - alert: NodeDiskHigh
+          expr: |
+            (1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 > 80
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            description: >-
+              Node {{ $labels.instance }} root disk usage is {{ printf "%.1f" $value }}%
+              (threshold: 80%).
+
+        - alert: NodeDiskCritical
+          expr: |
+            (1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 > 90
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            description: >-
+              Node {{ $labels.instance }} root disk usage is {{ printf "%.1f" $value }}%
+              (threshold: 90%). Immediate action required.
+
+    - name: homelab-pod-health
+      rules:
+        # Pod OOMKilled
+        - alert: PodOOMKilled
+          expr: |
+            kube_pod_container_status_last_terminated_reason{reason="OOMKilled"} == 1
+          for: 0m
+          labels:
+            severity: warning
+          annotations:
+            description: >-
+              Container {{ $labels.container }} in pod {{ $labels.namespace }}/{{ $labels.pod }}
+              was OOMKilled. Consider increasing memory limits.
+
+        # Pod crash looping
+        - alert: PodCrashLooping
+          expr: |
+            increase(kube_pod_container_status_restarts_total[1h]) > 5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            description: >-
+              Pod {{ $labels.namespace }}/{{ $labels.pod }} has restarted
+              {{ printf "%.0f" $value }} times in the last hour.
+
+        # Pod not ready for extended period
+        - alert: PodNotReady
+          expr: |
+            kube_pod_status_ready{condition="true"} == 0
+            and on(pod, namespace) kube_pod_status_phase{phase="Running"} == 1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            description: >-
+              Pod {{ $labels.namespace }}/{{ $labels.pod }} has been not ready
+              for more than 15 minutes.
+
+    - name: homelab-cluster-health
+      rules:
+        # Node not ready
+        - alert: NodeNotReady
+          expr: |
+            kube_node_status_condition{condition="Ready",status="true"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            description: >-
+              Node {{ $labels.node }} has been NotReady for more than 5 minutes.
+
+        # API server latency
+        - alert: APIServerLatencyHigh
+          expr: |
+            histogram_quantile(0.99,
+              sum(rate(apiserver_request_duration_seconds_bucket{verb!~"WATCH|CONNECT"}[5m])) by (le)
+            ) > 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            description: >-
+              Kubernetes API server p99 latency is {{ printf "%.2f" $value }}s
+              (threshold: 1s). API server may be under pressure.
+
+        # PersistentVolume usage
+        - alert: PVCNearFull
+          expr: |
+            kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes * 100 > 85
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            description: >-
+              PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }}
+              is {{ printf "%.1f" $value }}% full (threshold: 85%).
