@@ -100,8 +100,10 @@ prometheus:
             requests:
               storage: 10Gi
     # Discover ALL ServiceMonitors, not just chart-labeled ones
-    serviceMonitorSelector: {}
-    podMonitorSelector: {}
+    serviceMonitorSelector:
+      matchLabels: {}
+    podMonitorSelector:
+      matchLabels: {}
 
 # Grafana configuration
 grafana:
