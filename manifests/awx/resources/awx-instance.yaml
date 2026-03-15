@@ -1,0 +1,58 @@
+apiVersion: awx.ansible.com/v1beta1
+kind: AWX
+metadata:
+  name: awx
+  namespace: awx
+spec:
+  replicas: 1
+  admin_user: admin
+  admin_password_secret: awx-admin-password
+
+  # External PostgreSQL (existing cluster instance)
+  postgres_configuration_secret: awx-postgres-configuration
+
+  # Ingress via Traefik
+  ingress_type: ingress
+  ingress_class_name: traefik
+  hostname: awx.homelab.n2solutions.io
+  ingress_annotations: |
+    traefik.ingress.kubernetes.io/router.tls: "true"
+
+  # Projects persistence (AWX project files)
+  projects_persistence: true
+  projects_storage_class: nfs-client
+  projects_storage_size: 5Gi
+  projects_storage_access_mode: ReadWriteOnce
+
+  # Resource limits — tuned for homelab (8GB worker nodes)
+  web_resource_requirements:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+  task_resource_requirements:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+  ee_resource_requirements:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  redis_resource_requirements:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
