@@ -28,7 +28,7 @@ loki:
 singleBinary:
   replicas: 1
   persistence:
-    storageClass: local-path
+    storageClass: nfs-client
     size: 10Gi
 
 # Disable distributed mode components
