@@ -1,0 +1,22 @@
+# AWX Operator Helm values — homelab k3s
+# Chart: awx-operator 3.2.1 (appVersion: 2.19.1)
+# The operator manages AWX instances via the AWX CRD.
+# The AWX instance itself is created by the CR in resources/.
+
+AWX:
+  # Instance created via CR in resources/ — not via Helm template
+  enabled: false
+
+rbac:
+  create: true
+
+# Operator controller resource limits (the operator pod itself)
+operator-controller-containers:
+  awx-manager:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
