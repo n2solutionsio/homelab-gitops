@@ -28,18 +28,18 @@ spec:
   web_resource_requirements:
     requests:
       cpu: 100m
-      memory: 256Mi
+      memory: 512Mi
     limits:
       cpu: "1"
-      memory: 1Gi
+      memory: 2Gi
 
   task_resource_requirements:
     requests:
       cpu: 100m
-      memory: 256Mi
+      memory: 512Mi
     limits:
       cpu: "1"
-      memory: 1Gi
+      memory: 2Gi
 
   ee_resource_requirements:
     requests:
