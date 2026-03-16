@@ -1,28 +1,30 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: metallb
+  name: cilium
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   sources:
-    - repoURL: https://metallb.github.io/metallb
-      targetRevision: 0.15.3
-      chart: metallb
+    - repoURL: https://helm.cilium.io
+      targetRevision: 1.19.1
+      chart: cilium
       helm:
         valueFiles:
-          - $values/manifests/metallb/values.yaml
+          - $values/manifests/cilium/values.yaml
     - repoURL: https://github.com/n2solutionsio/homelab-gitops.git
       targetRevision: main
       ref: values
     - repoURL: https://github.com/n2solutionsio/homelab-gitops.git
       targetRevision: main
-      path: manifests/metallb/resources
+      path: manifests/cilium/resources
   destination:
     server: https://kubernetes.default.svc
-    namespace: metallb-system
+    namespace: kube-system
   syncPolicy:
     automated:
       prune: true
