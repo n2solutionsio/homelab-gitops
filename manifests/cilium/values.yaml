@@ -1,0 +1,45 @@
+# Cilium CNI — replaces flannel, kube-proxy, and MetalLB
+# Deployed via Helm in cloud-init (bootstrap), adopted by ArgoCD with ServerSideApply
+
+# Replace kube-proxy with eBPF-based service handling
+kubeProxyReplacement: true
+
+# k3s uses /var/lib/rancher/k3s/agent/etc for the CNI bin/conf dirs
+cni:
+  binPath: /var/lib/rancher/k3s/data/current/bin
+  confPath: /var/lib/rancher/k3s/agent/etc/cni/net.d
+
+# IPAM — use k3s default pod CIDR
+ipam:
+  mode: cluster-pool
+  operator:
+    clusterPoolIPv4PodCIDRList:
+      - 10.42.0.0/16
+
+# L2 announcements — replaces MetalLB L2 mode
+l2announcements:
+  enabled: true
+
+externalIPs:
+  enabled: true
+
+# LoadBalancer IP pool managed via CiliumLoadBalancerIPPool CRD in resources/
+
+# Hubble — observability
+hubble:
+  enabled: true
+  relay:
+    enabled: true
+  ui:
+    enabled: true
+    ingress:
+      enabled: true
+      annotations:
+        traefik.ingress.kubernetes.io/router.entrypoints: websecure
+        traefik.ingress.kubernetes.io/router.tls: "true"
+      hosts:
+        - hubble.homelab.n2solutions.io
+
+# Operator settings
+operator:
+  replicas: 1
