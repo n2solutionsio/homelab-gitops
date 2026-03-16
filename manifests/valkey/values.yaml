@@ -1,0 +1,44 @@
+# Bitnami Valkey Helm values — Orchestrator cache layer
+# Chart: bitnamicharts/valkey 5.4.3
+
+# Single instance (no replication — homelab)
+architecture: standalone
+
+auth:
+  enabled: true
+  existingSecret: valkey-password
+  existingSecretPasswordKey: password
+
+master:
+  persistence:
+    enabled: true
+    storageClass: nfs-client
+    size: 1Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
+  configuration: |-
+    maxmemory 96mb
+    maxmemory-policy allkeys-lru
+    save ""
+    appendonly no
+
+replica:
+  replicaCount: 0
+
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    namespace: valkey
+  resources:
+    requests:
+      cpu: 10m
+      memory: 16Mi
+    limits:
+      cpu: 100m
+      memory: 32Mi
