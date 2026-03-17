@@ -9,17 +9,17 @@ auth:
   existingSecret: valkey-password
   existingSecretPasswordKey: password
 
-master:
+primary:
   persistence:
     enabled: true
     storageClass: nfs-client
     size: 1Gi
   resources:
     requests:
-      cpu: 50m
+      cpu: 100m
       memory: 64Mi
     limits:
-      cpu: 250m
+      cpu: 300m
       memory: 128Mi
   configuration: |-
     maxmemory 96mb
