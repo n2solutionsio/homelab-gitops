@@ -1,5 +1,5 @@
 operator:
-  scanJobsConcurrentLimit: 3
+  scanJobsConcurrentLimit: 2
   scannerReportTTL: "24h"
   # Run a central trivy server so scan containers don't each download
   # the 88MB vuln DB — eliminates cache lock contention on multi-container pods
@@ -22,7 +22,7 @@ trivy:
       memory: 128Mi
     limits:
       cpu: 500m
-      memory: 512Mi
+      memory: 1Gi
   server:
     resources:
       requests:
