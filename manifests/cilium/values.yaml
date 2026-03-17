@@ -4,10 +4,15 @@
 # Replace kube-proxy with eBPF-based service handling
 kubeProxyReplacement: true
 
-# k3s uses /var/lib/rancher/k3s/agent/etc for the CNI bin/conf dirs
+# Direct API server access — required when kube-proxy is disabled
+# Without this, Cilium tries ClusterIP which needs kube-proxy (chicken-and-egg)
+k8sServiceHost: 10.30.30.10
+k8sServicePort: 6443
+
+# k3s v1.33 containerd uses standard CNI paths (not k3s-specific)
 cni:
-  binPath: /var/lib/rancher/k3s/data/current/bin
-  confPath: /var/lib/rancher/k3s/agent/etc/cni/net.d
+  binPath: /opt/cni/bin
+  confPath: /etc/cni/net.d
 
 # IPAM — use k3s default pod CIDR
 ipam:
