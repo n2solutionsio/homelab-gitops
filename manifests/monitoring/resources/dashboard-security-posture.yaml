@@ -1,0 +1,755 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-security-posture
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: "Security"
+data:
+  security-posture.json: |
+    {
+      "uid": "security-posture",
+      "title": "Security Posture",
+      "description": "Trivy vulnerability trends and Falco runtime security — track whether posture is improving or degrading",
+      "tags": ["security", "trivy", "falco", "vulnerabilities"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "editable": true,
+      "time": {
+        "from": "now-24h",
+        "to": "now"
+      },
+      "refresh": "5m",
+      "links": [
+        {
+          "title": "Homelab Overview",
+          "type": "link",
+          "icon": "apps",
+          "url": "/d/homelab-overview",
+          "targetBlank": false
+        },
+        {
+          "title": "Firewall Activity",
+          "type": "link",
+          "icon": "shield",
+          "url": "/d/unifi-firewall-activity",
+          "targetBlank": false
+        }
+      ],
+      "templating": {
+        "list": [
+          {
+            "name": "DS_PROMETHEUS",
+            "type": "datasource",
+            "query": "prometheus",
+            "current": {},
+            "hide": 0,
+            "includeAll": false,
+            "multi": false,
+            "options": [],
+            "refresh": 1,
+            "regex": "",
+            "skipUrlSync": false
+          }
+        ]
+      },
+      "panels": [
+        {
+          "type": "row",
+          "title": "Security Summary",
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+          "collapsed": false
+        },
+        {
+          "type": "stat",
+          "title": "Total Vulnerabilities",
+          "description": "Sum of all vulnerabilities across all severities",
+          "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "targets": [
+            {
+              "expr": "sum(trivy_image_vulnerabilities) OR vector(0)",
+              "legendFormat": "",
+              "refId": "A",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 50 },
+                  { "color": "orange", "value": 200 },
+                  { "color": "red", "value": 500 }
+                ]
+              },
+              "unit": "none"
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "textMode": "auto"
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Critical + High",
+          "description": "Combined critical and high severity vulnerabilities",
+          "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "targets": [
+            {
+              "expr": "sum(trivy_image_vulnerabilities{severity=~\"Critical|High\"}) OR vector(0)",
+              "legendFormat": "",
+              "refId": "A",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "orange", "value": 1 },
+                  { "color": "red", "value": 10 }
+                ]
+              },
+              "unit": "none"
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "textMode": "auto"
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Affected Workloads",
+          "description": "Number of workloads with at least one Critical vulnerability",
+          "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "targets": [
+            {
+              "expr": "count(sum by (resource_name, resource_namespace) (trivy_image_vulnerabilities{severity=\"Critical\"}) > 0) OR vector(0)",
+              "legendFormat": "",
+              "refId": "A",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 1 },
+                  { "color": "orange", "value": 5 },
+                  { "color": "red", "value": 10 }
+                ]
+              },
+              "unit": "none"
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "textMode": "auto"
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Falco Events (24h)",
+          "description": "Total Falco events across all priorities in the last 24 hours",
+          "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "targets": [
+            {
+              "expr": "sum(increase(falcosecurity_falcosidekick_falco_events_total[24h])) OR vector(0)",
+              "legendFormat": "",
+              "refId": "A",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 10 },
+                  { "color": "orange", "value": 50 },
+                  { "color": "red", "value": 100 }
+                ]
+              },
+              "unit": "none",
+              "decimals": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "textMode": "auto"
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Falco Critical/Error (24h)",
+          "description": "Emergency, Alert, Critical, and Error priority Falco events in the last 24 hours",
+          "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "targets": [
+            {
+              "expr": "sum(increase(falcosecurity_falcosidekick_falco_events_total{priority=~\"Emergency|Alert|Critical|Error\"}[24h])) OR vector(0)",
+              "legendFormat": "",
+              "refId": "A",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 1 },
+                  { "color": "red", "value": 5 }
+                ]
+              },
+              "unit": "none",
+              "decimals": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "textMode": "auto"
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Scanner Health",
+          "description": "Trivy scan job failures in the last 30 minutes — 0 means scanner is healthy",
+          "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "targets": [
+            {
+              "expr": "increase(trivy_operator_image_scan_job_failed_total[30m]) OR vector(0)",
+              "legendFormat": "",
+              "refId": "A",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 1 },
+                  { "color": "red", "value": 3 }
+                ]
+              },
+              "unit": "none",
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": { "text": "Healthy", "color": "green" }
+                  }
+                }
+              ]
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "textMode": "auto"
+          }
+        },
+        {
+          "type": "row",
+          "title": "Trivy Trends",
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+          "collapsed": false
+        },
+        {
+          "type": "timeseries",
+          "title": "Vulnerability Trend",
+          "description": "Vulnerability count over time by severity — shows whether security posture is improving or degrading",
+          "gridPos": { "h": 10, "w": 16, "x": 0, "y": 6 },
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "targets": [
+            {
+              "expr": "sum by (severity) (trivy_image_vulnerabilities)",
+              "legendFormat": "{{ severity }}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 15,
+                "lineWidth": 2,
+                "pointSize": 5,
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": { "mode": "none" },
+                "axisPlacement": "auto",
+                "gradientMode": "scheme"
+              },
+              "unit": "none"
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Critical" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "High" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Medium" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "yellow" } }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Low" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "tooltip": { "mode": "multi", "sort": "desc" },
+            "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "min", "max"] }
+          }
+        },
+        {
+          "type": "piechart",
+          "title": "Current Breakdown",
+          "description": "Current vulnerability distribution by severity",
+          "gridPos": { "h": 10, "w": 8, "x": 16, "y": 6 },
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "targets": [
+            {
+              "expr": "sum by (severity) (trivy_image_vulnerabilities)",
+              "legendFormat": "{{ severity }}",
+              "refId": "A",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "none"
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Critical" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "High" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Medium" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "yellow" } }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Low" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": { "displayMode": "table", "placement": "bottom", "values": ["value", "percent"] },
+            "pieType": "donut",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "fields": "",
+              "values": false
+            },
+            "tooltip": { "mode": "single" }
+          }
+        },
+        {
+          "type": "row",
+          "title": "Top Vulnerable Workloads",
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
+          "collapsed": false
+        },
+        {
+          "type": "table",
+          "title": "Top Vulnerable Images",
+          "description": "Top 15 workloads ranked by critical vulnerability count",
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 17 },
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "targets": [
+            {
+              "expr": "topk(15, sum by (resource_namespace, resource_name, image_repository) (trivy_image_vulnerabilities{severity=\"Critical\"}))",
+              "legendFormat": "",
+              "refId": "CRIT",
+              "instant": true,
+              "format": "table"
+            },
+            {
+              "expr": "sum by (resource_namespace, resource_name, image_repository) (trivy_image_vulnerabilities{severity=\"High\"})",
+              "legendFormat": "",
+              "refId": "HIGH",
+              "instant": true,
+              "format": "table"
+            },
+            {
+              "expr": "sum by (resource_namespace, resource_name, image_repository) (trivy_image_vulnerabilities{severity=\"Medium\"})",
+              "legendFormat": "",
+              "refId": "MED",
+              "instant": true,
+              "format": "table"
+            },
+            {
+              "expr": "sum by (resource_namespace, resource_name, image_repository) (trivy_image_vulnerabilities{severity=\"Low\"})",
+              "legendFormat": "",
+              "refId": "LOW",
+              "instant": true,
+              "format": "table"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "seriesToColumns",
+              "options": {
+                "byField": "resource_name"
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "Time 1": true,
+                  "Time 2": true,
+                  "Time 3": true,
+                  "Time 4": true,
+                  "resource_namespace 2": true,
+                  "resource_namespace 3": true,
+                  "resource_namespace 4": true,
+                  "image_repository 2": true,
+                  "image_repository 3": true,
+                  "image_repository 4": true
+                },
+                "indexByName": {},
+                "renameByName": {
+                  "resource_namespace 1": "Namespace",
+                  "resource_namespace": "Namespace",
+                  "resource_name": "Workload",
+                  "image_repository 1": "Image",
+                  "image_repository": "Image",
+                  "Value #CRIT": "Critical",
+                  "Value #HIGH": "High",
+                  "Value #MED": "Medium",
+                  "Value #LOW": "Low"
+                }
+              }
+            },
+            {
+              "id": "sortBy",
+              "options": {
+                "sort": [{ "field": "Critical", "desc": true }]
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "decimals": 0,
+              "custom": {
+                "displayMode": "auto",
+                "align": "auto"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Critical" },
+                "properties": [
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        { "color": "green", "value": null },
+                        { "color": "red", "value": 1 }
+                      ]
+                    }
+                  },
+                  { "id": "custom.displayMode", "value": "color-background-solid" },
+                  { "id": "custom.width", "value": 80 }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "High" },
+                "properties": [
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        { "color": "green", "value": null },
+                        { "color": "orange", "value": 1 }
+                      ]
+                    }
+                  },
+                  { "id": "custom.displayMode", "value": "color-background-solid" },
+                  { "id": "custom.width", "value": 80 }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Medium" },
+                "properties": [
+                  { "id": "custom.width", "value": 80 }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Low" },
+                "properties": [
+                  { "id": "custom.width", "value": 80 }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Namespace" },
+                "properties": [
+                  { "id": "custom.width", "value": 120 }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Workload" },
+                "properties": [
+                  { "id": "custom.width", "value": 200 }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "sortBy": [{ "displayName": "Critical", "desc": true }],
+            "footer": { "enablePagination": true }
+          }
+        },
+        {
+          "type": "row",
+          "title": "Falco Runtime Events",
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 27 },
+          "collapsed": false
+        },
+        {
+          "type": "timeseries",
+          "title": "Event Timeline",
+          "description": "Falco events over time by priority — stacked to show total event volume",
+          "gridPos": { "h": 10, "w": 16, "x": 0, "y": 28 },
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "targets": [
+            {
+              "expr": "sum by (priority) (increase(falcosecurity_falcosidekick_falco_events_total[$__rate_interval]))",
+              "legendFormat": "{{ priority }}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "drawStyle": "bars",
+                "fillOpacity": 80,
+                "lineWidth": 1,
+                "pointSize": 5,
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": { "mode": "normal" },
+                "axisPlacement": "auto",
+                "gradientMode": "none"
+              },
+              "unit": "none",
+              "decimals": 0
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Emergency" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "dark-red" } }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Alert" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Critical" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Error" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "yellow" } }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Warning" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Notice" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "purple" } }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "tooltip": { "mode": "multi", "sort": "desc" },
+            "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["sum"] }
+          }
+        },
+        {
+          "type": "table",
+          "title": "Top Triggered Rules",
+          "description": "Top 10 Falco rules by event count in the selected time range",
+          "gridPos": { "h": 10, "w": 8, "x": 16, "y": 28 },
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "targets": [
+            {
+              "expr": "topk(10, sum by (rule) (increase(falcosecurity_falcosidekick_falco_events_total[$__range])))",
+              "legendFormat": "",
+              "refId": "A",
+              "instant": true,
+              "format": "table"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true
+                },
+                "renameByName": {
+                  "rule": "Rule",
+                  "Value": "Events"
+                }
+              }
+            },
+            {
+              "id": "sortBy",
+              "options": {
+                "sort": [{ "field": "Events", "desc": true }]
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 10 },
+                  { "color": "orange", "value": 50 },
+                  { "color": "red", "value": 100 }
+                ]
+              },
+              "custom": {
+                "displayMode": "color-background-solid",
+                "align": "auto"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Rule" },
+                "properties": [
+                  { "id": "custom.displayMode", "value": "auto" },
+                  { "id": "custom.width", "value": 250 }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "sortBy": [{ "displayName": "Events", "desc": true }],
+            "footer": { "enablePagination": false }
+          }
+        }
+      ]
+    }
