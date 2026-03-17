@@ -21,9 +21,18 @@ spec:
     spec:
       imagePullSecrets:
         - name: ghcr-credentials
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: orchestrator
           image: ghcr.io/n2solutionsio/orchestrator:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           envFrom:
             - secretRef:
                 name: orchestrator-secrets
