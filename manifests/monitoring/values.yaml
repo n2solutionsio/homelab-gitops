@@ -76,7 +76,7 @@ alertmanager:
 
               *Namespace:* {{ .Labels.namespace }}
 
-              *Node:* {{ .Labels.node | default .Labels.instance | default "N/A" }}
+              *Node:* {{ if .Labels.node }}{{ .Labels.node }}{{ else if .Labels.instance }}{{ .Labels.instance }}{{ else }}N/A{{ end }}
 
               {{ end }}
       - name: slack-warnings
@@ -93,7 +93,7 @@ alertmanager:
 
               *Namespace:* {{ .Labels.namespace }}
 
-              *Node:* {{ .Labels.node | default .Labels.instance | default "N/A" }}
+              *Node:* {{ if .Labels.node }}{{ .Labels.node }}{{ else if .Labels.instance }}{{ .Labels.instance }}{{ else }}N/A{{ end }}
 
               {{ end }}
     inhibit_rules:
