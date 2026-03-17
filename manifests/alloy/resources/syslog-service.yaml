@@ -4,7 +4,7 @@ metadata:
   name: alloy-syslog
   namespace: logging
   annotations:
-    metallb.universe.tf/loadBalancerIPs: "10.30.30.201"
+    lbipam.cilium.io/ips: "10.30.30.201"
 spec:
   type: LoadBalancer
   externalTrafficPolicy: Local
