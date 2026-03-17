@@ -1,14 +1,16 @@
 operator:
   scanJobsConcurrentLimit: 3
   scannerReportTTL: "24h"
-  # Tolerate CP taint so node-collector can scan the control plane node
-  scanJobTolerations:
-    - key: "node-role.kubernetes.io/control-plane"
-      operator: "Exists"
-      effect: "NoSchedule"
 
 serviceMonitor:
   enabled: true
+
+# Tolerate CP taint so node-collector can scan the control plane
+nodeCollector:
+  tolerations:
+    - key: "node-role.kubernetes.io/control-plane"
+      operator: "Exists"
+      effect: "NoSchedule"
 
 trivy:
   resources:
