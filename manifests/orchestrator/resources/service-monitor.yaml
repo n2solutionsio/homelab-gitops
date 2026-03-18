@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: orchestrator
+  namespace: ai-org
+  labels:
+    app: orchestrator
+spec:
+  selector:
+    matchLabels:
+      app: orchestrator
+  endpoints:
+    - port: health
+      interval: 30s
+      path: /metrics
