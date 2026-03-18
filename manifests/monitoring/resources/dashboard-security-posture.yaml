@@ -750,6 +750,173 @@ data:
             "sortBy": [{ "displayName": "Events", "desc": true }],
             "footer": { "enablePagination": false }
           }
+        },
+        {
+          "type": "row",
+          "title": "Vulnerability Issue Tracker",
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 38 },
+          "collapsed": false
+        },
+        {
+          "type": "table",
+          "title": "Tracked Vulnerabilities",
+          "description": "Workloads tracked via automated GitHub issues — status shows whether vulnerability is still active or resolved",
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 39 },
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "pg-aiorg" },
+          "targets": [
+            {
+              "rawSql": "SELECT resource_name AS \"Workload\", resource_namespace AS \"Namespace\", image_repository AS \"Image\", (severity_counts->>'Critical')::int AS \"Critical\", status AS \"Status\", github_issue_number AS \"Issue #\", github_issue_url AS \"Issue URL\", first_seen AS \"First Seen\", last_checked AS \"Last Checked\", resolved_at AS \"Resolved\" FROM vulnerability_tracking ORDER BY CASE WHEN status = 'open' THEN 0 ELSE 1 END, first_seen DESC",
+              "refId": "A",
+              "format": "table"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "displayMode": "auto",
+                "align": "auto"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Status" },
+                "properties": [
+                  {
+                    "id": "mappings",
+                    "value": [
+                      { "type": "value", "options": { "open": { "text": "OPEN", "color": "red" } } },
+                      { "type": "value", "options": { "resolved": { "text": "RESOLVED", "color": "green" } } }
+                    ]
+                  },
+                  { "id": "custom.displayMode", "value": "color-background-solid" },
+                  { "id": "custom.width", "value": 100 }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Critical" },
+                "properties": [
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        { "color": "green", "value": null },
+                        { "color": "red", "value": 1 }
+                      ]
+                    }
+                  },
+                  { "id": "custom.displayMode", "value": "color-background-solid" },
+                  { "id": "custom.width", "value": 80 }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Issue #" },
+                "properties": [
+                  { "id": "custom.width", "value": 70 },
+                  {
+                    "id": "links",
+                    "value": [
+                      {
+                        "title": "View Issue",
+                        "url": "${__data.fields[\"Issue URL\"]}",
+                        "targetBlank": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Issue URL" },
+                "properties": [
+                  { "id": "custom.hidden", "value": true }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Workload" },
+                "properties": [
+                  { "id": "custom.width", "value": 180 }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Namespace" },
+                "properties": [
+                  { "id": "custom.width", "value": 120 }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "First Seen" },
+                "properties": [
+                  { "id": "unit", "value": "dateTimeAsIso" }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Last Checked" },
+                "properties": [
+                  { "id": "unit", "value": "dateTimeAsIso" }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Resolved" },
+                "properties": [
+                  { "id": "unit", "value": "dateTimeAsIso" }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "sortBy": [{ "displayName": "Status", "desc": false }],
+            "footer": { "enablePagination": true }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Open vs Resolved Trend",
+          "description": "Vulnerability lifecycle — shows how many issues are open vs resolved over time",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 49 },
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "pg-aiorg" },
+          "targets": [
+            {
+              "rawSql": "SELECT date_trunc('day', first_seen) AS time, count(*) FILTER (WHERE status = 'open') AS \"Open\", count(*) FILTER (WHERE status = 'resolved') AS \"Resolved\" FROM vulnerability_tracking GROUP BY 1 ORDER BY 1",
+              "refId": "A",
+              "format": "time_series"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "lineWidth": 2,
+                "pointSize": 5,
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": { "mode": "none" },
+                "axisPlacement": "auto"
+              },
+              "unit": "none",
+              "decimals": 0
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Open" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Resolved" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "tooltip": { "mode": "multi", "sort": "desc" },
+            "legend": { "displayMode": "list", "placement": "bottom" }
+          }
         }
       ]
     }
