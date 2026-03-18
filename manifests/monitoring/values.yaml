@@ -49,6 +49,11 @@ alertmanager:
         - receiver: "null"
           matchers:
             - alertname =~ "Watchdog|InfoInhibitor"
+        - receiver: slack-warnings
+          matchers:
+            - alertname = TrivyCriticalVulnerabilityFound
+          repeat_interval: 168h
+          continue: false
         - receiver: slack-critical
           matchers:
             - severity = critical
@@ -161,7 +166,24 @@ grafana:
       jsonData:
         sslmode: disable
         postgresVersion: 1600
-  envFromSecret: grafana-postgres-datasource
+    - name: PostgreSQL - AI Org
+      uid: pg-aiorg
+      type: postgres
+      access: proxy
+      url: postgresql.postgresql.svc.cluster.local:5432
+      user: grafana_readonly
+      database: ai_org
+      isDefault: false
+      secureJsonData:
+        password: $PG_AIORG_PASSWORD
+      jsonData:
+        sslmode: disable
+        postgresVersion: 1600
+  envFromSecrets:
+    - name: grafana-postgres-datasource
+      optional: false
+    - name: grafana-pg-aiorg
+      optional: false
   ingress:
     enabled: true
     ingressClassName: traefik
