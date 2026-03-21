@@ -767,6 +767,7 @@ data:
             {
               "rawSql": "SELECT resource_name AS \"Workload\", resource_namespace AS \"Namespace\", image_repository AS \"Image\", (severity_counts->>'Critical')::int AS \"Critical\", status AS \"Status\", github_issue_number AS \"Issue #\", github_issue_url AS \"Issue URL\", first_seen AS \"First Seen\", last_checked AS \"Last Checked\", resolved_at AS \"Resolved\" FROM vulnerability_tracking ORDER BY CASE WHEN status = 'open' THEN 0 ELSE 1 END, first_seen DESC",
               "refId": "A",
+              "rawQuery": true,
               "format": "table"
             }
           ],
@@ -879,6 +880,7 @@ data:
             {
               "rawSql": "SELECT date_trunc('day', first_seen) AS time, count(*) FILTER (WHERE status = 'open') AS \"Open\", count(*) FILTER (WHERE status = 'resolved') AS \"Resolved\" FROM vulnerability_tracking GROUP BY 1 ORDER BY 1",
               "refId": "A",
+              "rawQuery": true,
               "format": "time_series"
             }
           ],
