@@ -48,12 +48,7 @@ alertmanager:
       routes:
         - receiver: "null"
           matchers:
-            - alertname =~ "Watchdog|InfoInhibitor"
-        - receiver: slack-warnings
-          matchers:
-            - alertname = TrivyCriticalVulnerabilityFound
-          repeat_interval: 168h
-          continue: false
+            - alertname =~ "Watchdog|InfoInhibitor|TrivyCriticalVulnerabilityFound"
         - receiver: slack-critical
           matchers:
             - severity = critical
