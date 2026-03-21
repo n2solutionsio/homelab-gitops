@@ -163,6 +163,7 @@ grafana:
       secureJsonData:
         password: $PG_PASSWORD
       jsonData:
+        database: content_metrics
         sslmode: disable
         postgresVersion: 1600
     - name: PostgreSQL - AI Org
@@ -176,6 +177,7 @@ grafana:
       secureJsonData:
         password: $PG_AIORG_PASSWORD
       jsonData:
+        database: ai_org
         sslmode: disable
         postgresVersion: 1600
   envFromSecrets:
