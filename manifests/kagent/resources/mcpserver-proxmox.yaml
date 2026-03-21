@@ -15,7 +15,7 @@ spec:
         cpu: 50m
         memory: 128Mi
       limits:
-        cpu: 500m
+        cpu: 1000m
         memory: 256Mi
     secretRefs:
       - name: proxmox-mcp-credentials

@@ -63,6 +63,10 @@ alertmanager:
           matchers:
             - severity = warning
           repeat_interval: 4h
+        - receiver: slack-warnings
+          matchers:
+            - severity = info
+          repeat_interval: 24h
     receivers:
       - name: "null"
       - name: slack-critical
