@@ -19,8 +19,6 @@ spec:
       labels:
         app: orchestrator
     spec:
-      imagePullSecrets:
-        - name: ghcr-credentials
       securityContext:
         runAsNonRoot: true
         runAsUser: 999
@@ -29,7 +27,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: orchestrator
-          image: ghcr.io/n2solutionsio/orchestrator:v0.1.6
+          image: ghcr.io/n2solutionsio/orchestrator:v0.1.7
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
