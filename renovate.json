@@ -1,0 +1,89 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":timezone(America/New_York)"
+  ],
+  "labels": ["dependencies"],
+  "minimumReleaseAge": "3 days",
+  "rebaseWhen": "behind-base-branch",
+  "prConcurrentLimit": 10,
+  "prHourlyLimit": 4,
+  "schedule": ["before 8am on monday"],
+
+  "argocd": {
+    "fileMatch": ["^apps/.+\\.ya?ml$"]
+  },
+  "helm-values": {
+    "fileMatch": ["^manifests/.+/values\\.ya?ml$"]
+  },
+  "kubernetes": {
+    "fileMatch": ["^manifests/.+/resources/.+\\.ya?ml$"]
+  },
+
+  "packageRules": [
+    {
+      "description": "Tier 1 — Stable: group all patch updates from low-risk packages into a single weekly PR",
+      "matchUpdateTypes": ["patch"],
+      "excludePackagePatterns": [
+        "cilium",
+        "argo-?cd",
+        "argoproj/argocd",
+        "cert-manager",
+        "external-secrets",
+        "trivy",
+        "prometheus",
+        "kube-prometheus",
+        "traefik",
+        "openbao",
+        "bitnami/postgresql",
+        "bitnami/valkey",
+        "grafana/loki",
+        "kagent-dev/kagent/app",
+        "kmcp"
+      ],
+      "groupName": "patch updates (low-risk)"
+    },
+    {
+      "description": "Tier 2 — Control-plane / CRD-sensitive: 7-day stability, separate PRs, needs-review label",
+      "matchPackagePatterns": [
+        "cilium",
+        "argo-?cd",
+        "argoproj/argocd",
+        "cert-manager",
+        "external-secrets",
+        "trivy-operator",
+        "kube-prometheus-stack",
+        "prometheus-operator",
+        "traefik",
+        "openbao"
+      ],
+      "minimumReleaseAge": "7 days",
+      "labels": ["dependencies", "control-plane", "needs-review"]
+    },
+    {
+      "description": "Tier 3 — Stateful workloads: patches only; disable minor and major auto-PRs (postgres/loki/valkey require migration planning)",
+      "matchPackagePatterns": [
+        "bitnami/postgresql",
+        "grafana/loki",
+        "bitnami/valkey"
+      ],
+      "matchUpdateTypes": ["minor", "major"],
+      "enabled": false
+    },
+    {
+      "description": "Tier 4 — Alpha (kagent app, kmcp): block all auto-PRs; bump manually after reading release notes",
+      "matchPackagePatterns": [
+        "kagent-dev/kagent/app",
+        "kmcp"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Tag major updates for extra scrutiny across all tiers",
+      "matchUpdateTypes": ["major"],
+      "labels": ["dependencies", "major-update", "needs-review"]
+    }
+  ]
+}
