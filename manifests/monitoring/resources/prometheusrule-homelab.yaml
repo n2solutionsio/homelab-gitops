@@ -155,3 +155,70 @@ spec:
             description: >-
               PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }}
               is {{ printf "%.1f" $value }}% full (threshold: 85%).
+
+    # ---------------------------------------------------------------------
+    # Orchestrator Anthropic API health — input-token rate (ITPM), 429 rate,
+    # and prompt-cache effectiveness. Metrics exposed by the orchestrator at
+    # /metrics; see n2solutionsio/orchestrator src/orchestrator/metrics.py.
+    # ---------------------------------------------------------------------
+    - name: orchestrator-anthropic
+      rules:
+        # Any 429 propagating past the SDK's retry budget — user-visible
+        # rate-limit failure. Fires within a minute of the first occurrence.
+        - alert: AnthropicRateLimitHit
+          expr: |
+            increase(orchestrator_anthropic_rate_limit_total[5m]) > 0
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: Anthropic 429 hit on {{ $labels.operation }} ({{ $labels.model }})
+            description: >-
+              Orchestrator received an Anthropic 429 within the last 5 minutes
+              ({{ $value }} occurrences). The SDK's internal retries already
+              failed. operation={{ $labels.operation }} model={{ $labels.model }}.
+
+        # Approaching the 30k ITPM Tier 1 limit. Fires at 80% (24k tokens/min)
+        # so we get a heads-up before users see 429s. Raise threshold when on
+        # higher Anthropic tiers.
+        - alert: AnthropicITPMApproachingLimit
+          expr: |
+            sum(rate(orchestrator_api_tokens_total{direction="input"}[1m])) * 60 > 24000
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: Anthropic input tokens >80% of 30k ITPM Tier 1 limit
+            description: >-
+              Orchestrator input-token rate is {{ printf "%.0f" $value }} tokens/min
+              against the 30k ITPM Tier 1 cap. Reduce fan-out, trim tool counts,
+              or upgrade Anthropic tier. Cached tokens count separately and are
+              not included in this number.
+
+        # Prompt cache effectiveness — sustained low hit rate suggests the
+        # cache_control wrapping isn't working (SDK mismatch, invalid markers,
+        # or session churn defeating the 5-min ephemeral window). Informational
+        # severity — useful signal, not page-worthy.
+        - alert: AnthropicCacheHitRatioLow
+          expr: |
+            (
+              sum(rate(orchestrator_api_tokens_total{direction="cache_read"}[15m]))
+              /
+              (
+                sum(rate(orchestrator_api_tokens_total{direction="input"}[15m]))
+                + sum(rate(orchestrator_api_tokens_total{direction="cache_read"}[15m]))
+                > 0
+              )
+            ) < 0.5
+          for: 30m
+          labels:
+            severity: info
+          annotations:
+            summary: Anthropic prompt cache hit ratio below 50% for 30 min
+            description: >-
+              Cache hit ratio is {{ printf "%.2f" $value }} over the last 15
+              minutes (target ≥ 0.5). Expected ratio after the first call of
+              a session is 0.7-0.9. If sustained, check that cache_control
+              markers reach Anthropic (SDK version, request shape) and that
+              conversation sessions aren't restarting more often than the
+              5-min cache window.
