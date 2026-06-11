@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: orchestrator-config
+  namespace: ai-org
+data:
+  # Anthropic model the orchestrator routes Slack mentions to.
+  # Haiku 4.5 is the right tier for routing-class work: ~3x cheaper input,
+  # ~2-4x faster, and much higher ITPM per Anthropic rate-limit tier than
+  # Sonnet. Source: https://platform.claude.com/docs/en/about-claude/models/overview
+  # To change models: edit this value, commit, ArgoCD syncs, pod restarts.
+  # No image rebuild required.
+  ANTHROPIC_MODEL: claude-haiku-4-5

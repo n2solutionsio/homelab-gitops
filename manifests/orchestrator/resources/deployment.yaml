@@ -36,6 +36,8 @@ spec:
           envFrom:
             - secretRef:
                 name: orchestrator-secrets
+            - configMapRef:
+                name: orchestrator-config
           env:
             - name: ENVIRONMENT
               value: "production"
