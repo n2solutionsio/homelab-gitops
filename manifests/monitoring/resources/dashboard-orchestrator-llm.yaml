@@ -1,0 +1,169 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-orchestrator-llm
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: "Homelab"
+data:
+  orchestrator-llm.json: |
+    {
+      "uid": "orchestrator-llm",
+      "title": "Orchestrator — Anthropic LLM",
+      "description": "Anthropic API usage for the n2-orchestrator: ITPM headroom, prompt-cache effectiveness, and 429 rate. Metrics from n2solutionsio/orchestrator metrics.py.",
+      "tags": ["homelab", "orchestrator", "anthropic", "llm"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "editable": true,
+      "time": { "from": "now-1h", "to": "now" },
+      "refresh": "30s",
+      "panels": [
+        {
+          "id": 1,
+          "type": "stat",
+          "title": "Input tokens / minute (ITPM)",
+          "description": "Sum of orchestrator_api_tokens_total{direction=input} over a 1m window. The 30k red threshold corresponds to Anthropic Tier 1 ITPM for Claude Sonnet — raise for higher tiers. Cached tokens are NOT included.",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(rate(orchestrator_api_tokens_total{direction=\"input\"}[1m])) * 60",
+              "refId": "A",
+              "legendFormat": "input tokens/min"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 18000 },
+                  { "color": "orange", "value": 24000 },
+                  { "color": "red", "value": 30000 }
+                ]
+              }
+            }
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "justifyMode": "center",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+          }
+        },
+        {
+          "id": 2,
+          "type": "stat",
+          "title": "Prompt cache hit ratio",
+          "description": "cache_read / (input + cache_read) over the last 15 minutes. Target ≥ 50% (anything above 70% is excellent). Low ratio after warmup suggests session churn or cache_control wiring problems.",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(rate(orchestrator_api_tokens_total{direction=\"cache_read\"}[15m])) / clamp_min(sum(rate(orchestrator_api_tokens_total{direction=~\"input|cache_read\"}[15m])), 1)",
+              "refId": "A",
+              "legendFormat": "cache hit ratio"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "decimals": 1,
+              "min": 0,
+              "max": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "red", "value": null },
+                  { "color": "orange", "value": 0.3 },
+                  { "color": "yellow", "value": 0.5 },
+                  { "color": "green", "value": 0.7 }
+                ]
+              }
+            }
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "justifyMode": "center",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+          }
+        },
+        {
+          "id": 3,
+          "type": "timeseries",
+          "title": "Tokens / sec — input vs cache_read by operation",
+          "description": "Shows where input tokens are landing. A healthy cache means cache_read (from the cache) dominates input (fresh tokens). Spikes in input + flat cache_read = cache miss / session churn.",
+          "gridPos": { "h": 9, "w": 12, "x": 0, "y": 8 },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum by (direction, operation) (rate(orchestrator_api_tokens_total{direction=~\"input|cache_read|cache_create\"}[1m]))",
+              "refId": "A",
+              "legendFormat": "{{direction}} / {{operation}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "stacking": { "mode": "none" },
+                "showPoints": "never"
+              }
+            }
+          },
+          "options": {
+            "legend": { "showLegend": true, "displayMode": "table", "placement": "bottom", "calcs": ["mean", "lastNotNull", "max"] },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          }
+        },
+        {
+          "id": 4,
+          "type": "timeseries",
+          "title": "Anthropic 429 rate (per 5m)",
+          "description": "Counts 429 responses that propagated past the SDK's internal retries. Zero is the healthy baseline. Any sustained non-zero rate is a problem — alert fires within ~1 minute.",
+          "gridPos": { "h": 9, "w": 12, "x": 12, "y": 8 },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum by (model, operation) (increase(orchestrator_anthropic_rate_limit_total[5m]))",
+              "refId": "A",
+              "legendFormat": "{{operation}} / {{model}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 0,
+              "custom": {
+                "drawStyle": "bars",
+                "lineWidth": 1,
+                "fillOpacity": 80,
+                "showPoints": "never"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 1 }
+                ]
+              }
+            }
+          },
+          "options": {
+            "legend": { "showLegend": true, "displayMode": "list", "placement": "bottom" },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          }
+        }
+      ]
+    }
