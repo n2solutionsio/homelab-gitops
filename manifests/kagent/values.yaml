@@ -1,14 +1,20 @@
 # kagent Helm values — Anthropic provider, K8s + Helm + PromQL agents
-# Chart: kagent/helm/kagent 0.7.23
+# Chart: kagent/helm/kagent 0.9.8
+#
+# Schema note (0.9.x): sub-charts (agents and tools) are top-level keys.
+# The `agents:` and `tools:` nesting from 0.7.x has been removed.
 
-# Database — use existing PostgreSQL cluster
-# URL injected from ExternalSecret via volume mount (urlFile takes precedence over url)
+# Database — use existing PostgreSQL cluster.
+# Bundled Postgres in 0.9.x defaults to enabled; we explicitly disable it
+# so the chart does not stand up a second Postgres alongside our external one.
+# URL is injected from ExternalSecret via volume mount (urlFile takes precedence over url).
 database:
-  type: postgres
   postgres:
     vectorEnabled: true
     url: ""
     urlFile: /etc/kagent-db/url
+    bundled:
+      enabled: false
 
 # Controller
 controller:
@@ -49,28 +55,28 @@ providers:
     apiKeySecretRef: kagent-anthropic
     apiKeySecretKey: api-key
 
-# Agents — enable only what we need, disable the rest
-agents:
-  k8s-agent:
-    enabled: true
-  helm-agent:
-    enabled: true
-  observability-agent:
-    enabled: false
-  promql-agent:
-    enabled: true
-  kgateway-agent:
-    enabled: false
-  istio-agent:
-    enabled: false
-  argo-rollouts-agent:
-    enabled: false
-  cilium-policy-agent:
-    enabled: false
-  cilium-manager-agent:
-    enabled: false
-  cilium-debug-agent:
-    enabled: false
+# Agents — enable only what we need, disable the rest.
+# (0.9.x: these are top-level keys, not nested under `agents:`.)
+k8s-agent:
+  enabled: true
+helm-agent:
+  enabled: true
+observability-agent:
+  enabled: false
+promql-agent:
+  enabled: true
+kgateway-agent:
+  enabled: false
+istio-agent:
+  enabled: false
+argo-rollouts-agent:
+  enabled: false
+cilium-policy-agent:
+  enabled: false
+cilium-manager-agent:
+  enabled: false
+cilium-debug-agent:
+  enabled: false
 
 # MCP infrastructure
 kmcp:
@@ -79,9 +85,9 @@ kmcp:
 kagent-tools:
   enabled: true
 
-# Disable tools we don't have configured
-tools:
-  grafana-mcp:
-    enabled: false
-  querydoc:
-    enabled: false
+# Disable tools we don't have configured.
+# (0.9.x: these are top-level keys, not nested under `tools:`.)
+grafana-mcp:
+  enabled: false
+querydoc:
+  enabled: false

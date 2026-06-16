@@ -10,7 +10,7 @@ spec:
   sources:
     - chart: kagent/helm/kagent
       repoURL: ghcr.io/kagent-dev
-      targetRevision: 0.7.23
+      targetRevision: 0.9.8
       helm:
         valueFiles:
           - $values/manifests/kagent/values.yaml
