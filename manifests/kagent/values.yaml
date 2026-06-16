@@ -72,11 +72,11 @@ istio-agent:
 argo-rollouts-agent:
   enabled: false
 cilium-policy-agent:
-  enabled: false
+  enabled: true
 cilium-manager-agent:
-  enabled: false
+  enabled: true
 cilium-debug-agent:
-  enabled: false
+  enabled: true
 
 # MCP infrastructure
 kmcp:
