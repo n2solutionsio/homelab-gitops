@@ -1,0 +1,18 @@
+# Traefik IngressRoute exposing the kagent UI on the homelab.
+# The UI's nginx proxies /api -> kagent-controller and handles WebSockets
+# internally, so single-host routing is sufficient.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: kagent-ui
+  namespace: kagent
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: "Host(`kagent.homelab.n2solutions.io`)"
+      kind: Rule
+      services:
+        - name: kagent-ui
+          port: 8080
+  tls: {}
