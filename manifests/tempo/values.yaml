@@ -14,6 +14,18 @@ tempo:
       cpu: 1
       memory: 1Gi
 
+  # Container-level security context. Required by the `tracing` namespace's
+  # restricted PodSecurity profile (default in this cluster).
+  # readOnlyRootFilesystem must stay false — tempo writes traces + WAL.
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: false
+    seccompProfile:
+      type: RuntimeDefault
+
   # Retention bumped from the chart's 24h default — homelab incidents
   # often only get investigated days later.
   retention: 336h  # 14d

@@ -85,9 +85,18 @@ kmcp:
 kagent-tools:
   enabled: true
 
-# Disable tools we don't have configured.
+# Tools.
 # (0.9.x: these are top-level keys, not nested under `tools:`.)
+#
+# grafana-mcp is required by observability-agent — that agent's spec
+# references RemoteMCPServer "kagent-grafana-mcp" which the grafana-mcp
+# sub-chart creates. We point the sub-chart at our cluster's Grafana and
+# reuse the same ExternalSecret-backed credentials our existing custom
+# grafana-mcp-server uses.
 grafana-mcp:
-  enabled: false
+  enabled: true
+  grafana:
+    url: "http://monitoring-grafana.monitoring.svc.cluster.local:80"
+    secretRef: grafana-mcp-credentials
 querydoc:
   enabled: false
