@@ -185,7 +185,10 @@ grafana:
       uid: tempo
       type: tempo
       access: proxy
-      url: http://tempo.tracing.svc.cluster.local:3100
+      # Tempo's HTTP query API is on 3200 (chart names this port
+      # "tempo-prom-metrics" — misleading; it serves both Prom metrics
+      # AND the HTTP API including /api/search and TraceQL queries).
+      url: http://tempo.tracing.svc.cluster.local:3200
       isDefault: false
       jsonData:
         # Span → log links: from a span, pull related Loki logs filtered by
