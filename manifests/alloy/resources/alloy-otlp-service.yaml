@@ -1,0 +1,21 @@
+# Dedicated ClusterIP Service exposing Alloy's OTLP receivers cluster-internally.
+# Apps targeting OTLP send to alloy-otlp.logging.svc.cluster.local:4317 (gRPC)
+# or :4318 (HTTP). Mirrors the existing alloy-syslog Service pattern.
+apiVersion: v1
+kind: Service
+metadata:
+  name: alloy-otlp
+  namespace: logging
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: alloy
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+      protocol: TCP
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+      protocol: TCP
