@@ -1,0 +1,53 @@
+# Grafana Tempo Helm values — monolithic single-binary mode for homelab.
+# Chart: grafana/tempo 1.24.4 (appVersion 2.9.0)
+#
+# Trace pipeline target: Alloy will be reconfigured in a follow-up PR (#124)
+# to forward OTLP traffic here at tempo.tracing.svc.cluster.local:4317
+# (gRPC) / :4318 (HTTP).
+
+tempo:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1
+      memory: 1Gi
+
+  # Retention bumped from the chart's 24h default — homelab incidents
+  # often only get investigated days later.
+  retention: 336h  # 14d
+
+  # Disable anonymous usage reporting to Grafana Labs
+  reportingEnabled: false
+
+  storage:
+    trace:
+      backend: local
+      local:
+        path: /var/tempo/traces
+      wal:
+        path: /var/tempo/wal
+
+  # Default receivers include jaeger + otlp; we only need OTLP. Leaving
+  # jaeger off keeps the surface area small.
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: "0.0.0.0:4317"
+        http:
+          endpoint: "0.0.0.0:4318"
+
+# Persist traces + WAL across pod restarts/reschedules.
+# Using nfs-client so the volume isn't pinned to a single node.
+persistence:
+  enabled: true
+  storageClassName: nfs-client
+  accessModes:
+    - ReadWriteOnce
+  size: 20Gi
+
+# ServiceMonitor so kube-prometheus-stack scrapes Tempo's /metrics.
+serviceMonitor:
+  enabled: true
