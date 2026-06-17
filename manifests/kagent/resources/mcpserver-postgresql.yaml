@@ -14,7 +14,7 @@ spec:
         cpu: 150m
         memory: 128Mi
       limits:
-        cpu: 750m
+        cpu: 1500m
         memory: 256Mi
     secretRefs:
       - name: postgresql-mcp-credentials
