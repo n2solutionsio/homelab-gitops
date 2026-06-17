@@ -49,6 +49,16 @@ alertmanager:
         - receiver: "null"
           matchers:
             - alertname =~ "Watchdog|InfoInhibitor|TrivyCriticalVulnerabilityFound"
+        # Fork: every critical/warning alert ALSO goes to the n8n webhook so
+        # the incident-pipeline workflow can persist it as a GitHub issue.
+        # continue: true keeps the alert flowing to Slack receivers below.
+        - receiver: n8n-incidents
+          matchers:
+            - severity =~ "critical|warning"
+          continue: true
+          group_wait: 10s
+          group_interval: 1m
+          repeat_interval: 1h
         - receiver: slack-critical
           matchers:
             - severity = critical
@@ -64,6 +74,14 @@ alertmanager:
           repeat_interval: 24h
     receivers:
       - name: "null"
+      - name: n8n-incidents
+        webhook_configs:
+          # n8n workflow "Alert Incident Pipeline" — see manifests/n8n/README.md
+          # for the workflow design and import steps. The webhook node listens
+          # on path /webhook/alertmanager-incident.
+          - url: http://n8n.n8n.svc.cluster.local:80/webhook/alertmanager-incident
+            send_resolved: true
+            max_alerts: 0  # no truncation; let n8n iterate the full set
       - name: slack-critical
         slack_configs:
           - api_url_file: /etc/alertmanager/secrets/alertmanager-slack-webhook/webhook-url
