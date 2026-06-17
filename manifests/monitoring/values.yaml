@@ -165,12 +165,59 @@ grafana:
     size: 5Gi
   additionalDataSources:
     - name: Loki
+      uid: loki
       type: loki
       access: proxy
       url: http://loki-gateway.logging.svc.cluster.local:80
       isDefault: false
       jsonData:
         maxLines: 1000
+        # Derived fields: turn TraceID-shaped substrings in log lines into
+        # clickable links that open the corresponding trace in Tempo.
+        # Matches `trace_id=<hex>`, `traceID=<hex>`, `traceId: <hex>`, etc.
+        derivedFields:
+          - datasourceUid: tempo
+            matcherRegex: "(?i)trace[_-]?id[\"=:\\s]+([a-f0-9]+)"
+            name: TraceID
+            url: "$${__value.raw}"
+            urlDisplayLabel: "View in Tempo"
+    - name: Tempo
+      uid: tempo
+      type: tempo
+      access: proxy
+      url: http://tempo.tracing.svc.cluster.local:3100
+      isDefault: false
+      jsonData:
+        # Span → log links: from a span, pull related Loki logs filtered by
+        # service.name and the span's time window.
+        tracesToLogsV2:
+          datasourceUid: loki
+          spanStartTimeShift: "-1h"
+          spanEndTimeShift: "1h"
+          tags:
+            - key: service.name
+              value: app
+          filterByTraceID: false
+          filterBySpanID: false
+        # Span → metrics links: pull related Prometheus series for the span's service.
+        tracesToMetrics:
+          datasourceUid: prometheus
+          spanStartTimeShift: "-1h"
+          spanEndTimeShift: "1h"
+          tags:
+            - key: service.name
+              value: service
+        # Service graph + node graph: visualise the span topology.
+        serviceMap:
+          datasourceUid: prometheus
+        nodeGraph:
+          enabled: true
+        # Search bar in Grafana Explore for TraceQL.
+        search:
+          hide: false
+        # Enable streaming for newer Tempo (works with Tempo 2.x; harmless if not supported).
+        streamingEnabled:
+          search: true
     - name: PostgreSQL
       type: postgres
       access: proxy

@@ -117,6 +117,31 @@ alloy:
         }
       }
 
+      // ===== Trace pipeline (OpenTelemetry) =====
+      // Receive OTLP traces from in-cluster apps (orchestrator first; kagent later).
+      // Apps target the Alloy ClusterIP Service on :4317 (gRPC) or :4318 (HTTP).
+      otelcol.receiver.otlp "traces" {
+        grpc {
+          endpoint = "0.0.0.0:4317"
+        }
+        http {
+          endpoint = "0.0.0.0:4318"
+        }
+        output {
+          traces = [otelcol.exporter.otlp.tempo.input]
+        }
+      }
+
+      // Forward traces to Tempo (single-binary mode, OTLP gRPC ingest).
+      otelcol.exporter.otlp "tempo" {
+        client {
+          endpoint = "tempo.tracing.svc.cluster.local:4317"
+          tls {
+            insecure = true
+          }
+        }
+      }
+
 extraPorts:
   - name: syslog-udp
     port: 5514
