@@ -43,7 +43,7 @@ ui:
       cpu: 50m
       memory: 128Mi
     limits:
-      cpu: 500m
+      cpu: 1000m
       memory: 512Mi
 
 # LLM Provider — Anthropic Claude (default)
