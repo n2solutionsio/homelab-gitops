@@ -1,0 +1,327 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-alerts-history
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: "Homelab"
+data:
+  alerts-history.json: |
+    {
+      "uid": "alerts-history",
+      "title": "Alerts — History & Status",
+      "description": "Cluster-wide alert visibility: firing right now, recent timeline, top fired, breakdown by namespace and severity. Powered by the ALERTS and ALERTS_FOR_STATE series Prometheus emits for every rule.",
+      "tags": ["homelab", "alerts", "incidents"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "editable": true,
+      "time": { "from": "now-24h", "to": "now" },
+      "refresh": "30s",
+      "panels": [
+        {
+          "id": 1,
+          "type": "stat",
+          "title": "Firing now",
+          "description": "Count of alerts currently in firing state across the cluster.",
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "count(ALERTS{alertstate=\"firing\"})",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 5 },
+                  { "color": "red", "value": 15 }
+                ]
+              }
+            }
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "reduceOptions": { "calcs": ["lastNotNull"] }
+          }
+        },
+        {
+          "id": 2,
+          "type": "stat",
+          "title": "Firing — warning",
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "count(ALERTS{alertstate=\"firing\", severity=\"warning\"})",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 1 }
+                ]
+              }
+            }
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "reduceOptions": { "calcs": ["lastNotNull"] }
+          }
+        },
+        {
+          "id": 3,
+          "type": "stat",
+          "title": "Firing — critical",
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "count(ALERTS{alertstate=\"firing\", severity=\"critical\"})",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 1 }
+                ]
+              }
+            }
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "reduceOptions": { "calcs": ["lastNotNull"] }
+          }
+        },
+        {
+          "id": 4,
+          "type": "stat",
+          "title": "Distinct alerts fired (24h)",
+          "description": "How many unique alertnames went into firing state at least once in the last 24 hours.",
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "count(count by (alertname) (changes(ALERTS_FOR_STATE[24h]) > 0))",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short"
+            }
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "reduceOptions": { "calcs": ["lastNotNull"] }
+          }
+        },
+        {
+          "id": 5,
+          "type": "table",
+          "title": "Currently firing",
+          "description": "Every alert in firing state right now. Sorted by severity; click a row to see its labels.",
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 4 },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "ALERTS{alertstate=\"firing\"}",
+              "refId": "A",
+              "format": "table",
+              "instant": true
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "Value": true,
+                  "__name__": true,
+                  "alertstate": true,
+                  "endpoint": true,
+                  "instance": true,
+                  "job": true,
+                  "service": true,
+                  "uid": true,
+                  "pod_template_hash": true
+                },
+                "indexByName": {
+                  "severity": 0,
+                  "alertname": 1,
+                  "namespace": 2,
+                  "pod": 3,
+                  "container": 4
+                }
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": { "filterable": true }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "severity" },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": { "type": "color-background" }
+                  },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      { "type": "value", "options": { "critical": { "color": "red", "index": 0 } } },
+                      { "type": "value", "options": { "warning": { "color": "orange", "index": 1 } } },
+                      { "type": "value", "options": { "info": { "color": "blue", "index": 2 } } },
+                      { "type": "value", "options": { "none": { "color": "dark-gray", "index": 3 } } }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": 6,
+          "type": "state-timeline",
+          "title": "Alert state timeline (24h)",
+          "description": "Each row = one alert (by name + key labels). Colored bars show when each was firing.",
+          "gridPos": { "h": 12, "w": 24, "x": 0, "y": 14 },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "ALERTS{alertstate=\"firing\"}",
+              "refId": "A",
+              "legendFormat": "{{alertname}} {{namespace}}/{{pod}}",
+              "range": true
+            }
+          ],
+          "options": {
+            "showValue": "never",
+            "mergeValues": true,
+            "alignValue": "left"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "fixed", "fixedColor": "red" },
+              "custom": { "fillOpacity": 80 }
+            }
+          }
+        },
+        {
+          "id": 7,
+          "type": "bargauge",
+          "title": "Top fired alerts (7d)",
+          "description": "Most-fired alertnames over the last week. High counts here usually mean either a real recurring issue or a noisy rule worth tuning.",
+          "gridPos": { "h": 12, "w": 12, "x": 0, "y": 26 },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "topk(15, sum by (alertname) (changes(ALERTS_FOR_STATE[7d])))",
+              "refId": "A",
+              "legendFormat": "{{alertname}}",
+              "instant": true
+            }
+          ],
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "gradient",
+            "valueMode": "color",
+            "reduceOptions": { "calcs": ["lastNotNull"] }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "color": { "mode": "continuous-RdYlGr" }
+            }
+          }
+        },
+        {
+          "id": 8,
+          "type": "barchart",
+          "title": "Alerts fired by namespace (24h)",
+          "description": "Where the alerts are landing.",
+          "gridPos": { "h": 12, "w": 12, "x": 12, "y": 26 },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum by (namespace) (changes(ALERTS_FOR_STATE[24h]))",
+              "refId": "A",
+              "legendFormat": "{{namespace}}",
+              "instant": true
+            }
+          ],
+          "options": {
+            "orientation": "horizontal",
+            "stacking": "none",
+            "showValue": "auto",
+            "legend": { "displayMode": "hidden" }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "color": { "mode": "palette-classic" }
+            }
+          }
+        },
+        {
+          "id": 9,
+          "type": "timeseries",
+          "title": "Firing alert count by severity (over time)",
+          "description": "Total alerts in firing state at each scrape, broken down by severity. Spikes here line up with deploys, incidents, or rule changes.",
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 38 },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum by (severity) (ALERTS{alertstate=\"firing\"})",
+              "refId": "A",
+              "legendFormat": "{{severity}}"
+            }
+          ],
+          "options": {
+            "legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull", "max"] },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "stepAfter",
+                "fillOpacity": 30,
+                "stacking": { "mode": "normal", "group": "A" }
+              }
+            },
+            "overrides": [
+              { "matcher": { "id": "byName", "options": "critical" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] },
+              { "matcher": { "id": "byName", "options": "warning" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }] },
+              { "matcher": { "id": "byName", "options": "info" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }] },
+              { "matcher": { "id": "byName", "options": "none" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "gray" } }] }
+            ]
+          }
+        }
+      ]
+    }
