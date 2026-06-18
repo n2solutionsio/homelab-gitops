@@ -9,8 +9,16 @@ metadata:
     argocd.argoproj.io/sync-wave: "1"
 spec:
   replicas: 1
+  # RollingUpdate (not Recreate) so a missing or unhealthy image keeps
+  # the old pod running indefinitely instead of taking the service down.
+  # maxSurge=1 + maxUnavailable=0 means we briefly run 2 pods during a
+  # roll — acceptable since orchestrator is stateless w.r.t. inbound
+  # connections (Slack uses Socket Mode, outbound).
   strategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: orchestrator
