@@ -139,13 +139,163 @@ Once everything is wired:
 3. **Resolve.** Once the alert clears, expect a "Resolved at …" comment + the issue auto-closes.
 4. **Bootstrap edge case.** Restart n8n while an alert is firing; confirm Alertmanager's resolve event closes the issue cleanly.
 
+## Auto-triage extension (#127)
+
+After the base alert-incident pipeline above is working, extend the **same n8n
+workflow** to call the kagent observability-agent and post its first-pass
+analysis as the opening comment on the issue. We're not building a separate
+workflow — chaining via GitHub webhooks adds moving parts and creates loop-back
+risk. One workflow does the whole `alert → issue → first triage` chain.
+
+### Where the new nodes go
+
+Insert AFTER the GitHub "create issue" node (5a in the table above), and BEFORE
+the workflow ends. So the flow becomes:
+
+```
+Webhook → Code(parse) → Search Existing → IF
+  ├─ (firing + no issue) → Create Issue → [NEW: Call kagent → Post Comment]
+  ├─ (firing + existing issue) → Add "re-fire" comment
+  └─ (resolved + existing issue) → Close
+```
+
+### Pre-flight check
+
+The kagent observability-agent A2A endpoint must respond. Verified working:
+
+```bash
+kubectl run a2a-probe --rm -i --restart=Never --image=curlimages/curl:8.7.1 -- \
+  curl -sw "\nHTTP %{http_code}\n" \
+  -X POST -H 'Content-Type: application/json' -H 'X-User-Id: n8n@n2solutions.io' \
+  http://kagent-controller.kagent.svc.cluster.local:8083/api/a2a/kagent/observability-agent/ \
+  -d '{
+    "jsonrpc":"2.0","id":"probe","method":"message/send",
+    "params":{"message":{"messageId":"m1","role":"user",
+      "parts":[{"kind":"text","text":"How many pods in kagent namespace?"}]}}
+  }'
+```
+
+Returns a JSON-RPC response where the agent's final answer is at
+`result.artifacts[0].parts[0].text`. Full tool-use trace is in `result.history`.
+
+### Auto-triage nodes (per-step)
+
+| # | Node | Purpose |
+| --- | --- | --- |
+| T1 | **IF — should-triage?** | Skip if any of: alert severity is `info`; the firing-firing repeat path (5b); existing issue already has label `triaged`. Cheap loop-prevention. |
+| T2 | **Code — build investigation prompt** | Compose the prompt from the alert payload (see template below). Keep it short — long prompts blow up the agent's input token bill. |
+| T3 | **HTTP Request — call observability-agent** | POST to the A2A endpoint above. Timeout 120s. Wait for response, don't stream (kagent#837 has a streaming bug). |
+| T4 | **Code — extract response** | Pull `result.artifacts[0].parts[0].text` as the analysis. If the response has `status.state !== "completed"` or an `error`, return a fallback message instead. |
+| T5 | **GitHub — Create Issue Comment** | Post the analysis as the first comment on the issue created in 5a. Include token-usage line at the bottom (`result.metadata.kagent_usage_metadata.totalTokenCount`). |
+| T6 | **GitHub — Add Label** | Apply `triaged` label so we don't re-investigate on every re-fire. |
+
+### Prompt template (T2)
+
+```js
+const a = $json;  // normalized alert from the parse Code node
+return [{
+  json: {
+    prompt: `You are an SRE investigating an active alert in the homelab k3s cluster.
+ALERT: ${a.alertname} (severity=${a.severity})
+NAMESPACE: ${a.namespace}${a.pod ? `\nPOD: ${a.pod}` : ''}
+STARTED: ${a.startsAt}
+SUMMARY: ${a.summary || '(none)'}
+DESCRIPTION: ${a.description || '(none)'}
+
+Investigate using your PromQL, kubectl, and log-query tools. Be concise:
+1. What's the actual problem (one sentence)?
+2. What recent change or condition triggered it (one sentence + evidence)?
+3. What action should the human take next (one sentence)?
+
+Keep the entire response under 400 words. Do NOT speculate beyond what the tools show.`,
+    messageId: `triage-${a.fingerprint}`,
+  }
+}];
+```
+
+### A2A request body (T3)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "{{ $json.messageId }}",
+  "method": "message/send",
+  "params": {
+    "message": {
+      "messageId": "{{ $json.messageId }}",
+      "role": "user",
+      "parts": [{ "kind": "text", "text": "{{ $json.prompt }}" }]
+    }
+  }
+}
+```
+
+Headers:
+- `Content-Type: application/json`
+- `X-User-Id: n8n@n2solutions.io` (kagent auth.mode=unsecure trusts this)
+
+### Response extraction (T4)
+
+```js
+const r = $json.result;
+if (!r || r.status?.state !== 'completed') {
+  return [{ json: {
+    comment: `> **Auto-triage failed** — agent did not return a completed task. ` +
+             `Investigate manually. (Raw error: \`${JSON.stringify($json.error || r?.status)}\`)`
+  }}];
+}
+const analysis = r.artifacts?.[0]?.parts?.[0]?.text || '(empty response)';
+const tokens = r.metadata?.kagent_usage_metadata?.totalTokenCount || 'unknown';
+return [{ json: {
+  comment: `## 🤖 observability-agent — first-pass triage\n\n${analysis}\n\n---\n` +
+           `<sub>Tokens: ${tokens} · ` +
+           `[Re-run](kagent.homelab.n2solutions.io) by adding a comment</sub>`
+}}];
+```
+
+### Cost protection
+
+The bare facts:
+- A short investigation runs **~10k–15k tokens** on the observability-agent (the probe above used 11,270 tokens for a one-word answer). Complex prompts can hit 30k+.
+- At Anthropic Sonnet pricing (input $3/M, output $15/M), that's ~$0.04 per triage. Cheap individually; matters at scale.
+
+Hard guards:
+1. **Skip `severity=info`** in T1. The bulk of CPUThrottlingHigh-style alerts shouldn't auto-triage.
+2. **`triaged` label gate** — once an issue is triaged, never re-triage on re-fires. The human can manually unlabel and add a "retriage" comment to re-run.
+3. **Per-day cap (optional, but recommended for production)** — n8n's static-data feature can count invocations; refuse after N/day. For homelab, the severity gate is usually enough.
+4. **Severity-specific timeouts** — give critical alerts longer (e.g. 180s), warning alerts shorter (60s). Prevents one slow agent run from blocking the workflow.
+
+### Failure modes to handle gracefully (in T4 or T5)
+
+| Failure | Comment to post |
+| --- | --- |
+| Agent timeout / HTTP error | "Auto-triage failed (agent unreachable). Investigate manually." |
+| Agent returns `status.state="failed"` | "Auto-triage failed (agent error). Raw response in workflow logs." |
+| Agent returns empty text | "Auto-triage returned no findings. May need a more specific prompt." |
+| Loop detected (already triaged) | (skip entirely via T1 IF node) |
+
+Always post *something* so the human knows triage was attempted and didn't silently succeed.
+
+### Test plan (auto-triage portion)
+
+Once the auto-triage nodes are added to the workflow:
+
+1. **Synthetic firing alert** (severity=warning) → issue appears with the kagent analysis as the first comment within ~2 min.
+2. **Re-fire the same alert** → "re-fired" comment posted, NO new triage comment, `triaged` label already present.
+3. **Severity=info alert** → issue created (or not, depending on routing), NO triage comment.
+4. **Kill the observability-agent pod mid-workflow** → fallback "auto-triage failed" comment posted, workflow doesn't crash.
+
 ## Future work (separate issues)
 
-- **Auto-triage** (#127): when an issue is created with the `incident` label,
-  n8n calls the kagent observability-agent for a first-pass analysis and posts
-  it as a comment on the issue.
 - **Slack thread linkage** — also include a deeplink to the existing Slack
   notification in `#incidents` so humans can correlate.
 - **Severity escalation** — info-severity alerts could go to a lighter-weight
   destination (Slack only, no issue) which is the current behavior; revisit
   if any info alert turns out to need durable tracking.
+- **Specialized agent routing** — for some alert classes, a non-default agent
+  is a better fit (CiliumNetworkPolicy-related → `cilium-debug-agent`; kagent
+  pod issues → `k8s-agent`). Add a Switch node before T3 that picks the agent
+  by alert labels.
+- **Multi-turn investigation** — currently single-shot. Could re-invoke the
+  agent if the first response doesn't include a concrete next action. Costs
+  more tokens; defer until we see the failure pattern.
