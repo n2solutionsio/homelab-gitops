@@ -57,7 +57,9 @@
         "kube-prometheus-stack",
         "prometheus-operator",
         "traefik",
-        "openbao"
+        "openbao",
+        "grafana/tempo",
+        "n8n"
       ],
       "minimumReleaseAge": "7 days",
       "labels": ["dependencies", "control-plane", "needs-review"]
@@ -73,9 +75,9 @@
       "enabled": false
     },
     {
-      "description": "Tier 4 — Alpha (kagent app, kmcp): block all auto-PRs; bump manually after reading release notes",
+      "description": "Tier 4 — Alpha (kagent charts + image, kmcp): block all auto-PRs; bump manually after reading release notes. Matches the kagent + kagent-crds helm charts at ghcr.io/kagent-dev/kagent/helm/* as well as the runtime image and kmcp.",
       "matchPackagePatterns": [
-        "kagent-dev/kagent/app",
+        "kagent-dev/kagent",
         "kmcp"
       ],
       "enabled": false
