@@ -185,9 +185,15 @@ grafana:
         # Derived field: detect TraceID-shaped substrings in log lines
         # (trace_id=<hex>, traceID=<hex>, traceId: <hex>, etc.) and turn
         # them into a clickable link that opens the trace in Tempo.
+        #
+        # Regex notes: Grafana applies derivedFields client-side in JavaScript.
+        # JS regex does NOT support inline `(?i)` flag — produces
+        # "Invalid regular expression: Invalid group" at log-render time and
+        # breaks every Loki query. Use character classes for case-insensitivity
+        # on the "id" suffix; widen the hex range to cover upper + lower case.
         derivedFields:
           - datasourceUid: tempo
-            matcherRegex: "(?i)trace[_-]?id[\"=:\\s]+([a-f0-9]+)"
+            matcherRegex: "trace[_-]?[iI][dD][\"=:\\s]+([a-fA-F0-9]+)"
             name: TraceID
             url: "$${__value.raw}"
             urlDisplayLabel: "View in Tempo"
