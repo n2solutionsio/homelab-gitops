@@ -163,19 +163,34 @@ grafana:
     enabled: true
     storageClassName: nfs-client
     size: 5Gi
+  # Loki was originally provisioned without an explicit uid, so Grafana
+  # auto-assigned a random one (`P8E80F9AEF21F6940`). UIDs are immutable
+  # post-creation, so the only way to give it the stable `uid: loki` we
+  # need for cross-references is to delete + recreate it via provisioning.
+  # Runs on Grafana startup before the datasources block; brief Loki
+  # unavailability during recreation (seconds). No dashboards in repo
+  # or in cluster hardcode the old random uid (verified).
+  deleteDatasources:
+    - name: Loki
+      orgId: 1
   additionalDataSources:
     - name: Loki
+      uid: loki
       type: loki
       access: proxy
       url: http://loki-gateway.logging.svc.cluster.local:80
       isDefault: false
       jsonData:
         maxLines: 1000
-    # Minimal Tempo datasource — no cross-references yet. Grafana 12.4
-    # rejects provisioning when tracesToLogsV2/derivedFields reference a
-    # datasourceUid that doesn't exist (chicken-and-egg). After this
-    # lands and Tempo is registered, a follow-up PR will add the link
-    # blocks using actual resolved UIDs.
+        # Derived field: detect TraceID-shaped substrings in log lines
+        # (trace_id=<hex>, traceID=<hex>, traceId: <hex>, etc.) and turn
+        # them into a clickable link that opens the trace in Tempo.
+        derivedFields:
+          - datasourceUid: tempo
+            matcherRegex: "(?i)trace[_-]?id[\"=:\\s]+([a-f0-9]+)"
+            name: TraceID
+            url: "$${__value.raw}"
+            urlDisplayLabel: "View in Tempo"
     - name: Tempo
       uid: tempo
       type: tempo
@@ -188,6 +203,32 @@ grafana:
       jsonData:
         nodeGraph:
           enabled: true
+        # Span → log links: from any span in Tempo, Grafana opens Loki
+        # filtered by service.name == span's service.name within the
+        # span's time window (±1h gives breathing room for upstream/
+        # downstream context).
+        tracesToLogsV2:
+          datasourceUid: loki
+          spanStartTimeShift: "-1h"
+          spanEndTimeShift: "1h"
+          tags:
+            - key: service.name
+              value: app
+          filterByTraceID: false
+          filterBySpanID: false
+        # Span → metrics links: pull Prometheus series for the span's
+        # service over the span's time window.
+        tracesToMetrics:
+          datasourceUid: prometheus
+          spanStartTimeShift: "-1h"
+          spanEndTimeShift: "1h"
+          tags:
+            - key: service.name
+              value: service
+        # Service map: visualize call topology from span relationships,
+        # backed by Prometheus span-derived metrics.
+        serviceMap:
+          datasourceUid: prometheus
     - name: PostgreSQL
       type: postgres
       access: proxy
