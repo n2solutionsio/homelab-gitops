@@ -83,10 +83,11 @@
       "enabled": false
     },
     {
-      "description": "Tier 5 — First-party apps (n2solutionsio/*): immediate auto-PR, no stability gate, never grouped, needs-review label. We control these releases and test them ourselves before tagging; the 7-day Tier 2 wait is friction without value. Each release gets its own PR.",
+      "description": "Tier 5 — First-party apps (n2solutionsio/*): immediate auto-PR, no stability gate, never grouped, needs-review label. We control these releases and test them ourselves before tagging; the 7-day Tier 2 wait is friction without value. Each release gets its own PR. `schedule: at any time` overrides the global Monday-only schedule so Renovate opens our own bump PRs as soon as Mend's hosted runner sees the new tag on ghcr.",
       "matchPackagePatterns": ["^n2solutionsio/"],
       "minimumReleaseAge": "0 days",
       "groupName": null,
+      "schedule": ["at any time"],
       "labels": ["dependencies", "first-party", "needs-review"]
     },
     {
