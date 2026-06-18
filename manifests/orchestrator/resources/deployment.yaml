@@ -27,7 +27,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: orchestrator
-          image: ghcr.io/n2solutionsio/orchestrator:v0.1.9
+          image: ghcr.io/n2solutionsio/orchestrator:v0.2.0
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -51,6 +51,15 @@ spec:
               value: "http://kagent-controller.kagent.svc.cluster.local:8083"
             - name: APPROVAL_USER_IDS
               value: "U08PY23AFC4"
+            # OpenTelemetry tracing — exports OTLP gRPC to Alloy, which
+            # forwards to Tempo. Disable by removing OTEL_EXPORTER_OTLP_ENDPOINT
+            # (tracing.init() gracefully no-ops without it).
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://alloy-otlp.logging.svc.cluster.local:4317"
+            - name: OTEL_SERVICE_NAME
+              value: "n2-orchestrator"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "service.namespace=ai-org,deployment.environment=homelab"
           ports:
             - containerPort: 8080
               name: health
