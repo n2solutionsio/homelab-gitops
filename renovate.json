@@ -59,7 +59,8 @@
         "traefik",
         "openbao",
         "grafana/tempo",
-        "n8n"
+        "n8n",
+        "n2solutionsio/orchestrator"
       ],
       "minimumReleaseAge": "7 days",
       "labels": ["dependencies", "control-plane", "needs-review"]
