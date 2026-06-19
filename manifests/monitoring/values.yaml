@@ -148,6 +148,21 @@ prometheus:
       matchLabels: {}
     podMonitorSelector:
       matchLabels: {}
+    # Resource limits — no defaults set by the chart. Without these,
+    # Prometheus had 17 restart cycles in 14h (issue #150): kubelet
+    # liveness probe timed out during compactions, container killed.
+    # Pinning memory gives the heap room without sharing with neighbors;
+    # CPU lets compactions complete inside the probe failureThreshold.
+    # Current idle: ~1Gi memory, ~0m CPU; under load: spikes to several
+    # hundred m. 4Gi memory limit / 2 CPU limit gives headroom; requests
+    # match observed baseline.
+    resources:
+      requests:
+        cpu: 500m
+        memory: 2Gi
+      limits:
+        cpu: 2000m
+        memory: 4Gi
 
 # Grafana configuration
 grafana:
