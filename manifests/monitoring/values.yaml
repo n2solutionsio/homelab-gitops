@@ -158,7 +158,12 @@ prometheus:
     # match observed baseline.
     resources:
       requests:
-        cpu: 500m
+        # CPU request reduced from 500m → 100m: Prometheus idles near 0m and
+        # the cluster (with worker-1 cordoned during runtime-instability
+        # remediation) didn't have 500m headroom on worker-0/worker-2 to
+        # admit the pod. Limit stays at 2 CPU — bursts during compaction
+        # are absorbed there, not blocked at the scheduler.
+        cpu: 100m
         memory: 2Gi
       limits:
         cpu: 2000m
