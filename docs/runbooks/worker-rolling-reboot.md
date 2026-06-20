@@ -77,14 +77,19 @@ kubectl -n <NS> delete pod <POD> --force --grace-period=0
 Daemonsets stay on the node (correct — they reboot with it).
 
 ### 3. SSH to the node and reboot
+
+> **Node SSH access**: login user is **`ubuntu`** (cloud-init `ciuser`), key `~/.ssh/homelab_automation`
+> (stored in 1Password `homelab` vault as `homelab-automation-ssh`). Passwordless sudo is enabled.
+> Verify the user with `qm config <vmid>` on the Proxmox host if in doubt — don't assume.
+
 ```bash
 # from your laptop:
-ssh nick@<WORKER-IP>   # IPs: worker-0=10.30.30.11, worker-1=10.30.30.12, worker-2=10.30.30.13
+ssh -i ~/.ssh/homelab_automation ubuntu@<WORKER-IP>   # IPs: worker-0=10.30.30.11, worker-1=10.30.30.12, worker-2=10.30.30.13
 sudo reboot
 # connection drops — that's expected
 ```
 
-Alternative if SSH is broken: hard-reset the VM in the Proxmox web UI.
+Alternative if SSH is broken: reboot the VM from the Proxmox web UI (use **Reboot** = graceful ACPI, not Stop/Start).
 
 ### 4. Wait for it to come back
 ```bash
@@ -151,9 +156,9 @@ Pods that were unhealthy on this worker should now be Running cleanly somewhere.
 
 Indicates a deeper problem than accumulated runtime state. Investigate:
 
-- **Containerd version**: `ssh nick@<WORKER>; sudo crictl version` — k3s ships containerd; very old versions have known bugs. Recent k3s upgrade may be needed.
-- **Disk pressure**: `ssh nick@<WORKER>; df -h /var/lib/rancher` — if >80%, prune images: `sudo k3s crictl rmi --prune`.
-- **Kernel logs**: `ssh nick@<WORKER>; sudo dmesg -T | tail -100` — look for OOM kills, cgroup errors, NFS timeouts.
+- **Containerd version**: `ssh ubuntu@<WORKER>; sudo crictl version` — k3s ships containerd; very old versions have known bugs. Recent k3s upgrade may be needed.
+- **Disk pressure**: `ssh ubuntu@<WORKER>; df -h /` — if >80%, prune images: `sudo k3s crictl rmi --prune` and vacuum logs: `sudo journalctl --vacuum-time=3d`. (2026-06-20: worker-0 hit 84% from 95d of image cache + journal; prune+vacuum took it to 44%.)
+- **Kernel logs**: `ssh ubuntu@<WORKER>; sudo dmesg -T | tail -100` — look for OOM kills, cgroup errors, NFS timeouts.
 - **k3s service**: `sudo journalctl -u k3s-agent --since "1 hour ago" | tail -50` — look for repeated errors.
 
 ---
