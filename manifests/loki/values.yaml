@@ -39,9 +39,14 @@ write:
 backend:
   replicas: 0
 
-# Keep gateway for stable endpoint
+# Keep gateway for stable endpoint. Exposed via Cilium LB so the Asustor NAS
+# (mediaserver Docker host, outside the cluster) can push logs to Loki.
 gateway:
   enabled: true
+  service:
+    type: LoadBalancer
+    annotations:
+      lbipam.cilium.io/ips: "10.30.30.202"
 
 # Disable optional components
 chunksCache:
