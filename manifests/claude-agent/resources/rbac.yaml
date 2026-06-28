@@ -1,0 +1,57 @@
+# Least-privilege identity for the Claude Code agent.
+#
+# Rationale: the laptop's default kubeconfig authenticates as system:admin in
+# group system:masters, which BYPASSES RBAC entirely. We cannot restrict that
+# identity — we replace it. The agent runs under this ServiceAccount instead:
+# read-only, and explicitly WITHOUT access to core v1 Secrets.
+#
+# The built-in "view" ClusterRole already excludes core Secrets by design; we
+# add a separate read-only role for the CRDs "view" does not aggregate.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: claude-agent
+  namespace: claude-agent
+---
+# Read everything EXCEPT core Secrets (built-in "view" omits secrets).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: claude-agent-view
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: view
+subjects:
+  - kind: ServiceAccount
+    name: claude-agent
+    namespace: claude-agent
+---
+# "view" does not cover these CRDs — grant read-only so cluster debugging works.
+# These CRs hold references/status, never raw secret values.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: claude-agent-crd-read
+rules:
+  - apiGroups:
+      - kagent.dev
+      - argoproj.io
+      - external-secrets.io
+      - generators.external-secrets.io
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: claude-agent-crd-read
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: claude-agent-crd-read
+subjects:
+  - kind: ServiceAccount
+    name: claude-agent
+    namespace: claude-agent
