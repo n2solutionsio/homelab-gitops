@@ -9,17 +9,21 @@ spec:
   groups:
     - name: homelab-node-resources
       rules:
-        # Node memory pressure — warning at 80%, critical at 90%
+        # Node memory pressure — warning at 88%, critical at 90%.
+        # Threshold sits above worker-1's normal ~79-85% baseline; `for` +
+        # `keep_firing_for` add hysteresis so brief wobbles don't flap the
+        # alert (see issue #172).
         - alert: NodeMemoryHigh
           expr: |
-            (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 80
-          for: 5m
+            (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 88
+          for: 15m
+          keep_firing_for: 30m
           labels:
             severity: warning
           annotations:
             description: >-
               Node {{ $labels.instance }} memory usage is {{ printf "%.1f" $value }}%
-              (threshold: 80%).
+              (threshold: 88%).
 
         - alert: NodeMemoryCritical
           expr: |
