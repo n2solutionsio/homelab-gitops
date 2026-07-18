@@ -45,6 +45,11 @@ kind: GithubAccessToken
 metadata:
   name: orchestrator-github-app-token
   namespace: ai-org
+  annotations:
+    # Must exist before the token ExternalSecret (wave -1) reconciles, otherwise
+    # that ES fails "could not get secret data from provider" and ArgoCD blocks
+    # the sync before ever creating this generator.
+    argocd.argoproj.io/sync-wave: "-2"
 spec:
   appID: "4333688"
   installID: "147464784"
