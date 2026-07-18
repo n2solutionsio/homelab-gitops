@@ -1,0 +1,81 @@
+# GitHub App installation-token auth for the orchestrator.
+#
+# Replaces the long-lived nicknarcise PAT (ai-org/github pat-token) with a
+# GitHub App installation token that auto-rotates ~hourly. See issue #43.
+#
+# Chain:
+#   OpenBao secret/ai-org/github-app (field: private-key)
+#     └─(ExternalSecret github-app-private-key)→ Secret github-app-private-key
+#          └─(GithubAccessToken generator)→ mints a ghs_ installation token
+#               └─(ExternalSecret orchestrator-github-token, 50m)→ Secret orchestrator-github-token {token}
+#                    └─ mounted as a file in the orchestrator pod (see deployment.yaml)
+#
+# GitHub App: n2solutions-orchestrator-app (App ID 4333688, installation 147464784)
+# Permissions: Contents:read, Issues:read-write, Pull requests:read-write.
+# To recreate: create the App in the n2solutionsio org, install it, then store
+# its private key at OpenBao secret/ai-org/github-app (field: private-key).
+---
+# 1. Sync the GitHub App private key from OpenBao into a Kubernetes Secret
+#    that the generator can read. Rotate the key by updating OpenBao only.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: github-app-private-key
+  namespace: ai-org
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: openbao
+    kind: ClusterSecretStore
+  target:
+    name: github-app-private-key
+  data:
+    - secretKey: private-key.pem
+      remoteRef:
+        key: ai-org/github-app
+        property: private-key
+---
+# 2. GithubAccessToken generator — mints a short-lived (~1h) installation token
+#    from the App private key. The token inherits the App's installed scopes
+#    (Contents:read, Issues:rw, Pull requests:rw).
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: GithubAccessToken
+metadata:
+  name: orchestrator-github-app-token
+  namespace: ai-org
+spec:
+  appID: "4333688"
+  installID: "147464784"
+  auth:
+    privateKey:
+      secretRef:
+        name: github-app-private-key
+        key: private-key.pem
+  # Optional least-privilege scoping — uncomment to restrict the token to
+  # specific repos instead of all repos the App is installed on:
+  # repositories:
+  #   - n2solutions-ai-org
+  #   - orchestrator
+  #   - homelab-gitops
+---
+# 3. Materialize the generated token into a Secret the pod mounts. Refresh at
+#    50m so a fresh token is always in place well before the ~60m expiry.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: orchestrator-github-token
+  namespace: ai-org
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  refreshInterval: 50m
+  target:
+    name: orchestrator-github-token
+  dataFrom:
+    - sourceRef:
+        generatorRef:
+          apiVersion: generators.external-secrets.io/v1alpha1
+          kind: GithubAccessToken
+          name: orchestrator-github-app-token

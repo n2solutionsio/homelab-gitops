@@ -35,7 +35,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: orchestrator
-          image: ghcr.io/n2solutionsio/orchestrator:v0.1.12
+          image: ghcr.io/n2solutionsio/orchestrator:v0.1.13
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -46,7 +46,16 @@ spec:
                 name: orchestrator-secrets
             - configMapRef:
                 name: orchestrator-config
+          # Rotating GitHub App installation token (~1h TTL) mounted as a file.
+          # github_client.py reads it fresh per request, so kubelet's atomic
+          # update of the projected Secret is picked up without a restart.
+          volumeMounts:
+            - name: github-app-token
+              mountPath: /var/run/secrets/github-app
+              readOnly: true
           env:
+            - name: GITHUB_TOKEN_FILE
+              value: "/var/run/secrets/github-app/token"
             - name: ENVIRONMENT
               value: "production"
             - name: LOG_LEVEL
@@ -94,3 +103,7 @@ spec:
             limits:
               cpu: 1000m
               memory: 512Mi
+      volumes:
+        - name: github-app-token
+          secret:
+            secretName: orchestrator-github-token
