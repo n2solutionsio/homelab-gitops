@@ -20,33 +20,44 @@ GitHub n2solutionsio/homelab-gitops
 ```
 
 The wiring on the Alertmanager side is in `manifests/monitoring/values.yaml`
-under `alertmanager.config.receivers.n8n-incidents`. The credential for n8n's
-GitHub node is provisioned by `resources/external-secret-github.yaml`.
+under `alertmanager.config.receivers.n8n-incidents`. n8n's GitHub node
+authenticates via a **GitHub OAuth2** credential created in the n8n UI and
+authorized as the dedicated `n2solutions-bot` machine account (see setup below) —
+there is no GitHub secret synced into the cluster.
 
 ## One-time setup
 
-### 1. OpenBao: store a fine-grained GitHub PAT
+### 1. GitHub: dedicated bot account + OAuth app
 
-Generate a PAT at <https://github.com/settings/tokens?type=beta>:
-- Repository access: `n2solutionsio/homelab-gitops`
-- Permissions: **Issues** Read & write, **Contents** Read-only
+Auth uses a **GitHub OAuth2** credential (self-refreshing) authorized as a
+dedicated machine account — no personal PAT, no static secret synced into the
+cluster. n8n Community stores the credential in its own encrypted DB (the
+"External Secrets" integration is Enterprise-only), so there is **nothing to
+provision via OpenBao/ExternalSecrets** for GitHub.
 
-Store it:
-```bash
-bao kv put kv/n8n-github token=ghp_xxxxx
-```
+- **Machine account:** `n2solutions-bot` — an **outside collaborator** on the
+  `n2solutionsio` org (not a member, so no org-wide repo access). 2FA enabled;
+  login + TOTP in 1Password (`homelab` vault).
+- **Repo grant (least privilege):** add `n2solutions-bot` to
+  `n2solutionsio/homelab-gitops` **only**, with the **Triage** role — enough to
+  create / comment / close / label issues, without code write access.
+- **OAuth app:** `n2solutions-n8n-homelab`, **org-owned**
+  (`n2solutionsio` → Settings → Developer settings → OAuth Apps). Callback URL:
+  `https://n8n.homelab.n2solutions.io/rest/oauth2-credential/callback`.
+  Client ID + Secret in 1Password.
 
-ArgoCD syncs the ExternalSecret automatically; the resulting Secret
-`n8n-github-credentials` in the `n8n` namespace contains `GITHUB_TOKEN`.
+### 2. n8n: create the GitHub OAuth2 credential
 
-### 2. n8n: create the GitHub credential
+Log into GitHub as `n2solutions-bot` (separate/incognito browser), then in the
+n8n UI (`https://n8n.homelab.n2solutions.io`):
+1. **Credentials → New → GitHub OAuth2 API** (the OAuth2 variant, **not** "GitHub API")
+2. Paste the OAuth app's **Client ID** and **Client Secret** (from 1Password)
+3. Confirm the displayed **OAuth Redirect URL** matches the OAuth app's callback
+   exactly (`.../rest/oauth2-credential/callback`)
+4. Click **Connect my account** → authorize as `n2solutions-bot` → grant `n2solutionsio`
+5. Save as `GitHub - homelab-gitops (bot)`
 
-In n8n UI (`https://n8n.homelab.n2solutions.io`):
-1. **Credentials → New → GitHub API**
-2. Authentication: `Access Token`
-3. Token: paste from the Secret
-   (`kubectl -n n8n get secret n8n-github-credentials -o jsonpath='{.data.GITHUB_TOKEN}' | base64 -d`)
-4. Save as `GitHub - homelab-gitops`
+n8n stores and auto-refreshes the token — no rotation toil, no PAT, nothing in OpenBao.
 
 ### 3. n8n: import / build the workflow
 
