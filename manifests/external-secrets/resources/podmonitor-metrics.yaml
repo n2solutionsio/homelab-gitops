@@ -1,0 +1,19 @@
+# Scrape the External Secrets Operator controller's metrics (port 8080).
+# ESO exposes per-ExternalSecret sync status here (externalsecret_status_condition),
+# which the ExternalSecretNotReady alert relies on. Without this, ESO metrics are
+# not collected at all. Targets only the controller — the webhook and
+# cert-controller pods (app.kubernetes.io/name=external-secrets-{webhook,cert-controller})
+# don't export these metrics.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: external-secrets
+  namespace: external-secrets
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: external-secrets
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics
