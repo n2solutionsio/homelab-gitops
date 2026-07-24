@@ -1,0 +1,47 @@
+# Scrape agentgateway metrics (:15020) from every kmcp-managed MCP server pod.
+#
+# The MCP containers declare NO container ports, so a PodMonitor (which attaches
+# to declared ports) can't target :15020 — Prometheus discovers the pods but
+# drops them for having no port. A Service resolves targetPort 15020 into
+# Endpoints regardless of whether the container declares the port, and a
+# ServiceMonitor scrapes those endpoints (one target per MCP pod).
+#
+# See docs/ai-platform-roadmap.md (Track A / M1).
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentgateway-mcp-metrics
+  namespace: kagent
+  labels:
+    app.kubernetes.io/part-of: kagent
+    monitoring: agentgateway
+spec:
+  # Headless — this Service exists only to expose per-pod metrics endpoints for
+  # scraping, not to load-balance traffic.
+  clusterIP: None
+  selector:
+    app.kubernetes.io/managed-by: kmcp
+  ports:
+    - name: metrics
+      port: 15020
+      targetPort: 15020
+      protocol: TCP
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: agentgateway-mcp
+  namespace: kagent
+spec:
+  selector:
+    matchLabels:
+      monitoring: agentgateway
+  # Surface the pod's app name as a metric label so dashboards can group by MCP
+  # server (argocd-mcp-server, grafana-mcp-server, …) instead of hashed pod names.
+  podTargetLabels:
+    - app.kubernetes.io/name
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
