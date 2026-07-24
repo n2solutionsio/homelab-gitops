@@ -100,3 +100,18 @@ grafana-mcp:
     secretRef: grafana-mcp-credentials
 querydoc:
   enabled: false
+
+# Observability — export agent-execution telemetry (prompts, tool calls, token
+# usage, latency) via OTLP to the cluster Alloy collector, which forwards traces
+# to Tempo. The controller shipped with otel.tracing.enabled=false and an empty
+# endpoint, so it was exporting nothing. gRPC/insecure matches the in-cluster
+# Alloy OTLP receiver (alloy-otlp:4317, same endpoint the orchestrator uses).
+# See docs/ai-platform-roadmap.md (Track A / M1).
+otel:
+  tracing:
+    enabled: true
+    exporter:
+      otlp:
+        endpoint: "http://alloy-otlp.logging.svc.cluster.local:4317"
+        protocol: "grpc"
+        insecure: true
