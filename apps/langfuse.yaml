@@ -1,0 +1,43 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: langfuse
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    - repoURL: https://langfuse.github.io/langfuse-k8s
+      chart: langfuse
+      targetRevision: 1.5.40
+      helm:
+        valueFiles:
+          - $values/manifests/langfuse/values.yaml
+    - repoURL: https://github.com/n2solutionsio/homelab-gitops.git
+      targetRevision: main
+      ref: values
+    - repoURL: https://github.com/n2solutionsio/homelab-gitops.git
+      targetRevision: main
+      path: manifests/langfuse/resources
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: langfuse
+  ignoreDifferences:
+    - group: external-secrets.io
+      kind: ExternalSecret
+      jqPathExpressions:
+        - .spec.data[]?.remoteRef.conversionStrategy
+        - .spec.data[]?.remoteRef.decodingStrategy
+        - .spec.data[]?.remoteRef.metadataPolicy
+        - .spec.target.creationPolicy
+        - .spec.target.deletionPolicy
+        - .spec.target.template.engineVersion
+        - .spec.target.template.mergePolicy
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
