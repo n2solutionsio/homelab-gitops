@@ -1,0 +1,129 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-kagent-mcp
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: "Homelab"
+data:
+  kagent-mcp.json: |
+    {
+      "uid": "kagent-mcp-agentgateway",
+      "title": "kagent — MCP / agentgateway",
+      "description": "agentgateway (MCP proxy) HTTP health per kmcp server: request throughput, status/method mix, and errors. Metrics scraped from agentgateway :15020 (Service+ServiceMonitor agentgateway-mcp). Note: per-tool-call and LLM token/latency detail is NOT here — agentgateway does not populate its tool_calls counters in MCP-proxy mode; that data lives in Tempo traces (service kagent-controller / <agent>).",
+      "tags": ["homelab", "kagent", "agentgateway", "mcp"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "editable": true,
+      "time": { "from": "now-6h", "to": "now" },
+      "refresh": "30s",
+      "panels": [
+        {
+          "id": 1,
+          "type": "stat",
+          "title": "Request rate (all MCP servers)",
+          "description": "Total HTTP requests/sec across all agentgateway MCP proxies.",
+          "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+          "targets": [
+            { "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(rate(agentgateway_requests_total[5m]))", "refId": "A", "legendFormat": "req/s" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps", "decimals": 2 } },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "none", "graphMode": "area", "textMode": "value" }
+        },
+        {
+          "id": 2,
+          "type": "stat",
+          "title": "HTTP error rate",
+          "description": "Share of requests returning 4xx/5xx across all MCP servers. Warn >1%, critical >5%.",
+          "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+          "targets": [
+            { "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(rate(agentgateway_requests_total{status=~\"[45]..\"}[5m])) / clamp_min(sum(rate(agentgateway_requests_total[5m])), 0.001) * 100", "refId": "A", "legendFormat": "error %" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "percent", "decimals": 2, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 5 } ] } } },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area", "textMode": "value" }
+        },
+        {
+          "id": 3,
+          "type": "stat",
+          "title": "MCP servers up",
+          "description": "agentgateway scrape targets reporting healthy (up == 1). Expected: 5. Critical if <5.",
+          "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+          "targets": [
+            { "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "count(up{service=\"agentgateway-mcp-metrics\"} == 1)", "refId": "A", "legendFormat": "up" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "yellow", "value": 4 }, { "color": "green", "value": 5 } ] } } },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "none", "textMode": "value" }
+        },
+        {
+          "id": 4,
+          "type": "stat",
+          "title": "Requests (6h)",
+          "description": "Total HTTP requests handled by all MCP proxies over the dashboard window.",
+          "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+          "targets": [
+            { "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(increase(agentgateway_requests_total[6h]))", "refId": "A", "legendFormat": "requests" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "short", "decimals": 0 } },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "none", "graphMode": "area", "textMode": "value" }
+        },
+        {
+          "id": 5,
+          "type": "timeseries",
+          "title": "Request rate by MCP server",
+          "description": "HTTP requests/sec per MCP server.",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+          "targets": [
+            { "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum by (app_kubernetes_io_name) (rate(agentgateway_requests_total[5m]))", "refId": "A", "legendFormat": "{{app_kubernetes_io_name}}" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 8, "showPoints": "never" } } },
+          "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "lastNotNull"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+        },
+        {
+          "id": 6,
+          "type": "timeseries",
+          "title": "Request rate by HTTP status",
+          "description": "Requests/sec grouped by HTTP status code. 4xx/5xx stand out here.",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+          "targets": [
+            { "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum by (status) (rate(agentgateway_requests_total[5m]))", "refId": "A", "legendFormat": "{{status}}" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 8, "showPoints": "never" } } },
+          "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+        },
+        {
+          "id": 7,
+          "type": "timeseries",
+          "title": "Request rate by method",
+          "description": "Requests/sec by HTTP method (MCP uses POST for calls, DELETE to close sessions, GET for SSE).",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+          "targets": [
+            { "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum by (method) (rate(agentgateway_requests_total[5m]))", "refId": "A", "legendFormat": "{{method}}" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 8, "showPoints": "never" } } },
+          "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } }
+        },
+        {
+          "id": 8,
+          "type": "timeseries",
+          "title": "HTTP errors by MCP server",
+          "description": "4xx/5xx responses per second, per MCP server — localizes which backend is failing. Empty is healthy.",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+          "targets": [
+            { "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum by (app_kubernetes_io_name) (rate(agentgateway_requests_total{status=~\"[45]..\"}[5m]))", "refId": "A", "legendFormat": "{{app_kubernetes_io_name}}" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "bars", "lineWidth": 1, "fillOpacity": 60, "showPoints": "never", "stacking": { "mode": "normal", "group": "A" } }, "color": { "mode": "palette-classic" } } },
+          "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["sum"] }, "tooltip": { "mode": "multi", "sort": "desc" } }
+        }
+      ]
+    }
