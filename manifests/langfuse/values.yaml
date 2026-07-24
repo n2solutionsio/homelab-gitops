@@ -30,6 +30,19 @@ langfuse:
     # Don't phone usage stats home from the homelab.
     telemetryEnabled: false
     signUpDisabled: false
+  # The cluster defaults to PodSecurity `restricted`; the langfuse web/worker
+  # deployments ship no securityContext and were rejected. Harden them to be
+  # restricted-compliant (the langfuse v3 image runs as non-root by default).
+  podSecurityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    capabilities:
+      drop:
+        - ALL
 
 # --- External PostgreSQL (existing cluster) ---
 postgresql:
@@ -62,7 +75,17 @@ redis:
 clickhouse:
   deploy: true
   replicaCount: 1
-  resourcesPreset: medium
+  # The `medium` preset requests 500m CPU, which won't fit — the 2-core workers
+  # have only ~350-380m CPU unreserved. Explicit modest requests that fit, with
+  # room to burst. Memory is not the constraint (nodes have GiB free).
+  resourcesPreset: "none"
+  resources:
+    requests:
+      cpu: 250m
+      memory: 1Gi
+    limits:
+      cpu: "1"
+      memory: 2Gi
   zookeeper:
     replicaCount: 1
   auth:
