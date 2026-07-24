@@ -181,6 +181,19 @@ grafana:
     dashboards:
       searchNamespace: ALL
       folderAnnotation: grafana_folder
+  # Grafana Image Renderer — enables server-side PNG export of dashboards and
+  # panels (via /render). Needed to snapshot dashboards for reports and blog
+  # posts. Deploys a separate renderer Deployment+Service; the chart wires
+  # GF_RENDERING_SERVER_URL / GF_RENDERING_CALLBACK_URL on Grafana automatically.
+  imageRenderer:
+    enabled: true
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
   admin:
     existingSecret: grafana-admin
     userKey: admin-user
