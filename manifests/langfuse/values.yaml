@@ -1,0 +1,75 @@
+# Langfuse — LLM observability & evaluation platform (self-hosted).
+# Chart: langfuse/langfuse 1.5.40 (appVersion 3.221.1)
+#
+# Dependency strategy (see docs/ai-platform-roadmap.md, Track B):
+#   - PostgreSQL: EXTERNAL — reuse the existing postgresql cluster
+#   - Redis:      EXTERNAL — reuse the existing Valkey (Redis-compatible)
+#   - ClickHouse: BUNDLED  — required by Langfuse v3, not present in-cluster
+#   - S3/blob:    BUNDLED  — MinIO, required by Langfuse v3, not present
+#
+# All secrets come from the ExternalSecret `langfuse-secrets` (resources/),
+# assembled from OpenBao. Generate/store the app secrets before first sync
+# (see the PR description).
+
+langfuse:
+  nextauth:
+    url: https://langfuse.homelab.n2solutions.io
+    secret:
+      secretKeyRef:
+        name: langfuse-secrets
+        key: nextauth-secret
+  salt:
+    secretKeyRef:
+      name: langfuse-secrets
+      key: salt
+  encryptionKey:
+    secretKeyRef:
+      name: langfuse-secrets
+      key: encryption-key
+  features:
+    # Don't phone usage stats home from the homelab.
+    telemetryEnabled: false
+    signUpDisabled: false
+
+# --- External PostgreSQL (existing cluster) ---
+postgresql:
+  deploy: false
+  host: postgresql.postgresql.svc.cluster.local
+  port: 5432
+  auth:
+    username: postgres
+    database: langfuse
+    existingSecret: langfuse-secrets
+    secretKeys:
+      userPasswordKey: postgres-password
+      adminPasswordKey: postgres-password
+
+# --- External Redis (existing Valkey) ---
+redis:
+  deploy: false
+  host: valkey-primary.valkey.svc.cluster.local
+  port: 6379
+  auth:
+    username: default
+    existingSecret: langfuse-secrets
+    existingSecretPasswordKey: redis-password
+
+# --- Bundled ClickHouse (v3 requirement) ---
+clickhouse:
+  deploy: true
+  auth:
+    existingSecret: langfuse-secrets
+    existingSecretKey: clickhouse-password
+
+# --- Bundled MinIO / S3 (v3 requirement) ---
+s3:
+  deploy: true
+  bucket: langfuse
+  accessKeyId:
+    secretKeyRef:
+      name: langfuse-secrets
+      key: s3-access-key
+  secretAccessKey:
+    secretKeyRef:
+      name: langfuse-secrets
+      key: s3-secret-key

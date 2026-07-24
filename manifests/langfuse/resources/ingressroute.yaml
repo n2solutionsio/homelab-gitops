@@ -1,0 +1,16 @@
+# Traefik IngressRoute exposing the Langfuse web UI (matches the kagent-ui pattern).
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: langfuse
+  namespace: langfuse
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: "Host(`langfuse.homelab.n2solutions.io`)"
+      kind: Rule
+      services:
+        - name: langfuse-web
+          port: 3000
+  tls: {}
