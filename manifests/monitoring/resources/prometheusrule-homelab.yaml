@@ -84,11 +84,19 @@ spec:
 
     - name: homelab-pod-health
       rules:
-        # Pod OOMKilled
+        # Pod OOMKilled — fire only on a RECENT OOM, not a stale latched state.
+        # kube_pod_container_status_last_terminated_reason stays =1 for the life
+        # of the pod, so matching it alone latches the alert firing forever after
+        # a single historical OOMKill (see #<PR>). Gate on an actual restart in
+        # the last 15m so it fires when the OOM just happened and self-clears once
+        # the container stays stable.
         - alert: PodOOMKilled
           expr: |
             kube_pod_container_status_last_terminated_reason{reason="OOMKilled"} == 1
+            and on(namespace, pod, container)
+            increase(kube_pod_container_status_restarts_total[15m]) > 0
           for: 0m
+          keep_firing_for: 1h
           labels:
             severity: warning
           annotations:
