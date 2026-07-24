@@ -1,0 +1,24 @@
+# Scrape agentgateway's Prometheus metrics from every kmcp-managed MCP server pod.
+#
+# agentgateway (the proxy fronting each stdio MCP server) exposes rich metrics on
+# port 15020 — request counts/latency per MCP route (agentgateway_requests_*),
+# tool-call counts/errors (tool_calls, tool_call_errors), and gen_ai token/latency
+# metrics. The endpoint is live by default but was never scraped: no containerPort
+# is declared and no Service/monitor existed.
+#
+# Port 15020 is unnamed in the pod spec, so we target it by number via targetPort.
+# Prometheus' podMonitorSelector is empty on this cluster, so this PodMonitor is
+# picked up automatically. See docs/ai-platform-roadmap.md (Track A / M1).
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: agentgateway-mcp
+  namespace: kagent
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/managed-by: kmcp
+  podMetricsEndpoints:
+    - targetPort: 15020
+      path: /metrics
+      interval: 30s
