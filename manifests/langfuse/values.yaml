@@ -55,8 +55,16 @@ redis:
     existingSecretPasswordKey: redis-password
 
 # --- Bundled ClickHouse (v3 requirement) ---
+# Chart defaults to a 3-replica HA cluster (+3 zookeepers) at the 2xlarge preset,
+# which asks ~3 CPUs and won't schedule on the homelab workers. Run a single
+# non-HA ClickHouse with one zookeeper and a modest preset. Langfuse fixes
+# shards=1 already; replicaCount=1 => single-node.
 clickhouse:
   deploy: true
+  replicaCount: 1
+  resourcesPreset: medium
+  zookeeper:
+    replicaCount: 1
   auth:
     existingSecret: langfuse-secrets
     existingSecretKey: clickhouse-password
