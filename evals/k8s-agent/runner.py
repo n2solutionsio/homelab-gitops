@@ -40,7 +40,21 @@ def ask_agent(agent, question):
         headers={"Content-Type": "application/json", "X-User-Id": "eval-runner@n2solutions.io"})
     with urllib.request.urlopen(req, timeout=180) as r:
         res = json.load(r)["result"]
-    answer = res["artifacts"][0]["parts"][0]["text"]
+    # Prefer the final artifact; some responses (esp. long reasoning) omit
+    # `artifacts` and put the answer as the last agent text in `history`.
+    arts = res.get("artifacts") or []
+    answer = ""
+    if arts and arts[0].get("parts"):
+        answer = arts[0]["parts"][0].get("text", "")
+    if not answer:
+        for m in reversed(res.get("history", [])):
+            if m.get("role") == "agent":
+                for p in m.get("parts", []):
+                    if p.get("kind") == "text" and p.get("text"):
+                        answer = p["text"]
+                        break
+            if answer:
+                break
     tools = set(re.findall(r'"name":\s*"([a-z0-9_]+)"', json.dumps(res.get("history", []))))
     return answer, tools
 
@@ -67,12 +81,13 @@ def main():
     ds = yaml.safe_load(open("/config/dataset-v1.yaml"))
     name = ds["dataset"]
     lf("/api/public/v2/datasets", {"name": name})
+    default_agent = ds.get("agent", "k8s-agent")  # agent is dataset-level; items may override
     acc, toolrate = [], []
     print(f"=== eval run {RUN} · dataset {name} · {len(ds['items'])} items ===")
     for it in ds["items"]:
         q, gt, expect_tool = it["input"], it["ground_truth"], it.get("expect_tool")
         try:
-            answer, tools = ask_agent(it["agent"], q)
+            answer, tools = ask_agent(it.get("agent", default_agent), q)
         except Exception as ex:
             print(f"[{it['id']}] AGENT ERROR: {ex}")
             continue

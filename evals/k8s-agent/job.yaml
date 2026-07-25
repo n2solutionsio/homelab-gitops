@@ -29,9 +29,12 @@ spec:
           args:
             - |
               set -e
+              # Non-root (uid 1000) with no writable HOME: point HOME + pip at /tmp.
+              export HOME=/tmp
               python3 -c "import urllib.request; urllib.request.urlretrieve('https://dl.k8s.io/release/v1.33.0/bin/linux/amd64/kubectl','/tmp/kubectl')"
               chmod +x /tmp/kubectl && export PATH=/tmp:$PATH
-              pip install --quiet --no-cache-dir pyyaml
+              pip install --quiet --no-cache-dir --target=/tmp/pylib pyyaml
+              export PYTHONPATH=/tmp/pylib
               python3 /config/runner.py
           envFrom:
             - secretRef: { name: langfuse-eval-keys }
