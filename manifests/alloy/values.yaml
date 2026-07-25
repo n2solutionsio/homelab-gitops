@@ -34,6 +34,22 @@ alloy:
       - name: geoip
         mountPath: /geoip
         readOnly: true
+  # Langfuse project API keys for the trace fan-out (see the trace pipeline).
+  # optional=true so a missing/unsynced secret can NEVER break the collector —
+  # sys.env() then returns "", the Langfuse export 401s, and Tempo is unaffected.
+  extraEnv:
+    - name: LANGFUSE_OTEL_PUBLIC_KEY
+      valueFrom:
+        secretKeyRef:
+          name: langfuse-otel-keys
+          key: public-key
+          optional: true
+    - name: LANGFUSE_OTEL_SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: langfuse-otel-keys
+          key: secret-key
+          optional: true
   configMap:
     content: |
       // Find all pod log files on this node
@@ -128,7 +144,11 @@ alloy:
           endpoint = "0.0.0.0:4318"
         }
         output {
-          traces = [otelcol.exporter.otlp.tempo.input]
+          // Fan out: Tempo (infra tracing) AND Langfuse (LLM observability/eval).
+          traces = [
+            otelcol.exporter.otlp.tempo.input,
+            otelcol.exporter.otlphttp.langfuse.input,
+          ]
         }
       }
 
@@ -140,6 +160,22 @@ alloy:
             insecure = true
           }
         }
+      }
+
+      // Also send traces to Langfuse via its OTLP endpoint, for LLM
+      // observability + evaluation. Basic auth uses the project public/secret
+      // API keys (injected as env from the langfuse-otel-keys secret). If the
+      // keys are absent this export just 401s — the Tempo path is independent.
+      otelcol.exporter.otlphttp "langfuse" {
+        client {
+          endpoint = "http://langfuse-web.langfuse.svc.cluster.local:3000/api/public/otel"
+          auth     = otelcol.auth.basic.langfuse.handler
+        }
+      }
+
+      otelcol.auth.basic "langfuse" {
+        username = sys.env("LANGFUSE_OTEL_PUBLIC_KEY")
+        password = sys.env("LANGFUSE_OTEL_SECRET_KEY")
       }
 
 extraPorts:
