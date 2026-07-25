@@ -43,8 +43,13 @@ spec:
               valueFrom: { secretKeyRef: { name: langfuse-eval-keys, key: public-key } }
             - name: LANGFUSE_SECRET_KEY
               valueFrom: { secretKeyRef: { name: langfuse-eval-keys, key: secret-key } }
+            # For LLM-as-judge scoring of reasoning items (M-eval-3).
+            - name: ANTHROPIC_API_KEY
+              valueFrom: { secretKeyRef: { name: langfuse-eval-keys, key: anthropic-api-key } }
             - name: LANGFUSE_HOST
               value: "http://langfuse-web.langfuse.svc.cluster.local:3000"
+            - name: PYTHONUNBUFFERED
+              value: "1"
           volumeMounts:
             - name: eval-runner
               mountPath: /config

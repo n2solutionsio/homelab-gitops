@@ -75,6 +75,34 @@ def score_match(answer, expected, mode):
     return 0.0
 
 
+JUDGE_MODEL = os.environ.get("JUDGE_MODEL", "claude-sonnet-4-5-20250929")
+
+
+def judge(question, answer, rubric):
+    """LLM-as-judge: score a reasoning answer 0.0-1.0 against a rubric via the
+    Anthropic Messages API. Returns (score, reason)."""
+    key = os.environ.get("ANTHROPIC_API_KEY")
+    if not key:
+        return None, "no ANTHROPIC_API_KEY"
+    prompt = (
+        "You are grading an AI agent's answer to a Kubernetes question. Score ONLY "
+        "against the rubric — reward covering the rubric's points, penalize what it "
+        "says to penalize. Be strict but fair.\n\n"
+        f"QUESTION:\n{question}\n\nRUBRIC:\n{rubric}\n\nAGENT ANSWER:\n{answer}\n\n"
+        'Respond with ONLY a JSON object: {"score": <float 0.0-1.0>, "reason": "<one sentence>"}')
+    body = {"model": JUDGE_MODEL, "max_tokens": 300,
+            "messages": [{"role": "user", "content": prompt}]}
+    req = urllib.request.Request("https://api.anthropic.com/v1/messages",
+        data=json.dumps(body).encode(),
+        headers={"content-type": "application/json", "x-api-key": key,
+                 "anthropic-version": "2023-06-01"})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        text = json.load(r)["content"][0]["text"]
+    m = re.search(r'\{.*\}', text, re.S)
+    obj = json.loads(m.group(0))
+    return float(obj["score"]), obj.get("reason", "")
+
+
 def main():
     ds = None
     import yaml
@@ -82,7 +110,7 @@ def main():
     name = ds["dataset"]
     lf("/api/public/v2/datasets", {"name": name})
     default_agent = ds.get("agent", "k8s-agent")  # agent is dataset-level; items may override
-    acc, toolrate = [], []
+    acc, toolrate, judged = [], [], []
     print(f"=== eval run {RUN} · dataset {name} · {len(ds['items'])} items ===")
     for it in ds["items"]:
         q, gt, expect_tool = it["input"], it["ground_truth"], it.get("expect_tool")
@@ -91,11 +119,19 @@ def main():
         except Exception as ex:
             print(f"[{it['id']}] AGENT ERROR: {ex}")
             continue
-        expected, scores = None, {}
+        expected, scores, jreason = None, {}, None
         if gt["type"] == "computed":
             expected = truth(gt["check"])
             scores["correct"] = score_match(answer, expected, gt["match"])
             acc.append(scores["correct"])
+        elif gt["type"] == "judge":
+            try:
+                js, jreason = judge(q, answer, gt.get("rubric", ""))
+                if js is not None:
+                    scores["judge"] = js
+                    judged.append(js)
+            except Exception as ex:
+                print(f"[{it['id']}] JUDGE ERROR: {ex}")
         if expect_tool:
             scores["tool_used"] = 1.0 if expect_tool in tools else 0.0
             toolrate.append(scores["tool_used"])
@@ -104,19 +140,22 @@ def main():
             "input": {"question": q}, "expectedOutput": expected})
         lf("/api/public/ingestion", {"batch": [{"id": tid + "-t", "type": "trace-create",
             "timestamp": NOW(), "body": {"id": tid, "name": f"eval:{it['id']}", "input": q,
-            "output": answer, "metadata": {"run": RUN, "expected": expected, "tools": sorted(tools)}}}]})
+            "output": answer, "metadata": {"run": RUN, "expected": expected,
+            "tools": sorted(tools), "judge_reason": jreason}}}]})
         if scores:
             lf("/api/public/ingestion", {"batch": [{"id": f"{tid}-{k}", "type": "score-create",
                 "timestamp": NOW(), "body": {"traceId": tid, "name": k, "value": v}} for k, v in scores.items()]})
         lf("/api/public/dataset-run-items", {"runName": RUN, "datasetItemId": it["id"], "traceId": tid})
-        print(f"[{it['id']}] ans={answer.strip()[:32]!r} exp={expected!r} tools={sorted(tools)} {scores}")
+        tail = f" judge={jreason}" if jreason else ""
+        print(f"[{it['id']}] ans={answer.strip()[:32]!r} exp={expected!r} tools={sorted(tools)} {scores}{tail}")
 
     print(f"\n=== {RUN} summary ===")
     if acc:
         print(f"deterministic accuracy: {sum(acc):.0f}/{len(acc)} ({100*sum(acc)/len(acc):.0f}%)")
     if toolrate:
         print(f"tool-use rate:          {sum(toolrate):.0f}/{len(toolrate)} ({100*sum(toolrate)/len(toolrate):.0f}%)")
-    print(f"judge items logged (unscored, see M-eval-3): {sum(1 for i in ds['items'] if i['ground_truth']['type']=='judge')}")
+    if judged:
+        print(f"llm-judge (reasoning):  mean {sum(judged)/len(judged):.2f} over {len(judged)} items")
 
 
 if __name__ == "__main__":
