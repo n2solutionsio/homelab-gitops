@@ -53,3 +53,6 @@ spec:
       remoteRef: { key: langfuse-otel, property: public-key }
     - secretKey: secret-key
       remoteRef: { key: langfuse-otel, property: secret-key }
+    # For the LLM-as-judge scoring of reasoning items (M-eval-3).
+    - secretKey: anthropic-api-key
+      remoteRef: { key: ai-org/anthropic, property: api-key }
