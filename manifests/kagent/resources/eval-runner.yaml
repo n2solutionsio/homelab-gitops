@@ -1,0 +1,55 @@
+# Persistent bits for the k8s-agent eval runner (Eval 01). The runner script +
+# dataset are turned into a ConfigMap at run time (see evals/k8s-agent/README.md);
+# the Job is triggered manually. These RBAC + secret resources are GitOps-managed.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: eval-runner
+  namespace: kagent
+---
+# Read-only cluster access so the runner can compute ground truth via kubectl.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: eval-runner-read
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "namespaces", "pods", "services"]
+    verbs: ["get", "list"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: eval-runner-read
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: eval-runner-read
+subjects:
+  - kind: ServiceAccount
+    name: eval-runner
+    namespace: kagent
+---
+# Langfuse project API keys (same OpenBao path the Alloy export uses) so the
+# runner can push the dataset run + scores.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: langfuse-eval-keys
+  namespace: kagent
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: openbao
+    kind: ClusterSecretStore
+  target:
+    name: langfuse-eval-keys
+  data:
+    - secretKey: public-key
+      remoteRef: { key: langfuse-otel, property: public-key }
+    - secretKey: secret-key
+      remoteRef: { key: langfuse-otel, property: secret-key }
