@@ -98,6 +98,9 @@ clickhouse:
     existingSecretKey: clickhouse-password
 
 # --- Bundled MinIO / S3 (v3 requirement) ---
+# accessKeyId/secretAccessKey are what langfuse USES to connect; auth.* are the
+# bundled MinIO's ROOT credentials. They must be the SAME, or langfuse gets
+# InvalidAccessKeyId writing ingestion events. Point both at the same secret keys.
 s3:
   deploy: true
   bucket: langfuse
@@ -109,3 +112,7 @@ s3:
     secretKeyRef:
       name: langfuse-secrets
       key: s3-secret-key
+  auth:
+    existingSecret: langfuse-secrets
+    rootUserSecretKey: s3-access-key
+    rootPasswordSecretKey: s3-secret-key
