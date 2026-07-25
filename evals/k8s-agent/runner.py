@@ -10,7 +10,9 @@ M-eval-3 (Langfuse LLM-as-judge). See docs/eval-01-k8s-agent-quality.md.
 
 Env: LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_HOST, RUN_NAME (optional).
 """
-import os, re, json, base64, time, subprocess, urllib.request, urllib.error
+import os, re, sys, json, base64, time, subprocess, urllib.request, urllib.error
+
+_LF_DOWN = False  # set once if Langfuse is unreachable (e.g. parked/scaled to 0)
 
 LF_HOST = os.environ.get("LANGFUSE_HOST", "http://langfuse-web.langfuse.svc.cluster.local:3000")
 AUTH = "Basic " + base64.b64encode(
@@ -21,6 +23,11 @@ NOW = lambda: time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())
 
 
 def lf(path, payload):
+    # Best-effort: Langfuse storage is optional. If it's parked (scaled to 0) the
+    # gate still runs — scores are computed regardless; we just skip storing.
+    global _LF_DOWN
+    if _LF_DOWN:
+        return None
     req = urllib.request.Request(LF_HOST + path, data=json.dumps(payload).encode(),
         headers={"Content-Type": "application/json", "Authorization": AUTH}, method="POST")
     try:
@@ -30,6 +37,10 @@ def lf(path, payload):
         if e.code != 409:  # 409 = already exists (dataset/item) — fine
             print(f"  ! langfuse {path} -> {e.code}: {e.read().decode()[:160]}")
         return e.code
+    except Exception:
+        _LF_DOWN = True
+        print("  (Langfuse unreachable — parked? skipping storage; scores/gate still computed)")
+        return None
 
 
 def ask_agent(agent, question):
@@ -149,13 +160,30 @@ def main():
         tail = f" judge={jreason}" if jreason else ""
         print(f"[{it['id']}] ans={answer.strip()[:32]!r} exp={expected!r} tools={sorted(tools)} {scores}{tail}")
 
+    a = sum(acc) / len(acc) if acc else None
+    t = sum(toolrate) / len(toolrate) if toolrate else None
+    j = sum(judged) / len(judged) if judged else None
     print(f"\n=== {RUN} summary ===")
-    if acc:
-        print(f"deterministic accuracy: {sum(acc):.0f}/{len(acc)} ({100*sum(acc)/len(acc):.0f}%)")
-    if toolrate:
-        print(f"tool-use rate:          {sum(toolrate):.0f}/{len(toolrate)} ({100*sum(toolrate)/len(toolrate):.0f}%)")
-    if judged:
-        print(f"llm-judge (reasoning):  mean {sum(judged)/len(judged):.2f} over {len(judged)} items")
+    if a is not None:
+        print(f"deterministic accuracy: {sum(acc):.0f}/{len(acc)} ({100*a:.0f}%)")
+    if t is not None:
+        print(f"tool-use rate:          {sum(toolrate):.0f}/{len(toolrate)} ({100*t:.0f}%)")
+    if j is not None:
+        print(f"llm-judge (reasoning):  mean {j:.2f} over {len(judged)} items")
+
+    # Regression gate — only enforced when EVAL_GATE=1 (the scheduled gate sets it;
+    # ad-hoc runs just report). Fails the run (exit 1) if any metric is below its
+    # floor, which surfaces as a failed Job -> Alertmanager (see prometheusrule).
+    if os.environ.get("EVAL_GATE") == "1":
+        floors = {"accuracy": (a, float(os.environ.get("EVAL_MIN_ACCURACY", "0.7"))),
+                  "tool-use": (t, float(os.environ.get("EVAL_MIN_TOOL", "0.8"))),
+                  "judge":    (j, float(os.environ.get("EVAL_MIN_JUDGE", "0.5")))}
+        breaches = [f"{k} {v:.2f} < {floor}" for k, (v, floor) in floors.items()
+                    if v is not None and v < floor]
+        if breaches:
+            print("GATE: FAIL — " + "; ".join(breaches))
+            sys.exit(1)
+        print("GATE: PASS — all metrics at/above baseline floors")
 
 
 if __name__ == "__main__":

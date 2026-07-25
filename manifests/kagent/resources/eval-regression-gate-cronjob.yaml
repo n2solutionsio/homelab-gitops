@@ -1,0 +1,79 @@
+# M-eval-4: scheduled regression gate for k8s-agent. Runs the eval weekly (and
+# is manually triggerable) with EVAL_GATE=1 so it EXITS NON-ZERO if any metric
+# drops below its floor — surfacing as a failed Job that Alertmanager catches
+# (see manifests/monitoring/resources/prometheusrule-eval-gate.yaml).
+#
+# Langfuse-independent: scores are computed via kubectl + Anthropic; if Langfuse
+# is parked, storage is skipped but the gate still runs. So the schedule doesn't
+# force Langfuse back up.
+#
+# Manual run: kubectl -n kagent create job --from=cronjob/eval-regression-gate eval-gate-manual
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: eval-regression-gate
+  namespace: kagent
+spec:
+  schedule: "0 6 * * 0"        # Sundays 06:00
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      ttlSecondsAfterFinished: 604800   # keep a week so the alert can see failures
+      template:
+        spec:
+          serviceAccountName: eval-runner
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            seccompProfile: { type: RuntimeDefault }
+          containers:
+            - name: runner
+              image: python:3.12-slim
+              securityContext:
+                allowPrivilegeEscalation: false
+                runAsNonRoot: true
+                runAsUser: 1000
+                capabilities: { drop: ["ALL"] }
+              command: ["sh", "-c"]
+              args:
+                - |
+                  set -e
+                  export HOME=/tmp
+                  python3 -c "import urllib.request; urllib.request.urlretrieve('https://dl.k8s.io/release/v1.33.0/bin/linux/amd64/kubectl','/tmp/kubectl')"
+                  chmod +x /tmp/kubectl && export PATH=/tmp:$PATH
+                  pip install --quiet --no-cache-dir --target=/tmp/pylib pyyaml
+                  export PYTHONPATH=/tmp/pylib
+                  python3 /config/runner.py
+              env:
+                - name: LANGFUSE_PUBLIC_KEY
+                  valueFrom: { secretKeyRef: { name: langfuse-eval-keys, key: public-key } }
+                - name: LANGFUSE_SECRET_KEY
+                  valueFrom: { secretKeyRef: { name: langfuse-eval-keys, key: secret-key } }
+                - name: ANTHROPIC_API_KEY
+                  valueFrom: { secretKeyRef: { name: langfuse-eval-keys, key: anthropic-api-key } }
+                - name: LANGFUSE_HOST
+                  value: "http://langfuse-web.langfuse.svc.cluster.local:3000"
+                - name: PYTHONUNBUFFERED
+                  value: "1"
+                # Gate config — floors are set a little under the first baseline
+                # (80% acc / 90% tool / 0.60 judge) so it fires only on real drops.
+                - name: EVAL_GATE
+                  value: "1"
+                - name: EVAL_MIN_ACCURACY
+                  value: "0.7"
+                - name: EVAL_MIN_TOOL
+                  value: "0.8"
+                - name: EVAL_MIN_JUDGE
+                  value: "0.5"
+                - name: RUN_NAME
+                  value: "gate"
+              volumeMounts:
+                - name: eval-runner
+                  mountPath: /config
+          volumes:
+            - name: eval-runner
+              configMap: { name: eval-runner }

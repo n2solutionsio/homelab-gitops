@@ -5,32 +5,39 @@ First eval on the Langfuse platform. Invokes k8s-agent against
 ground truth) and **tool-use**, and pushes a Langfuse dataset run. Design:
 [`docs/eval-01-k8s-agent-quality.md`](../../docs/eval-01-k8s-agent-quality.md).
 
-## Prereqs (GitOps-managed)
-`manifests/kagent/resources/eval-runner.yaml` provides the `eval-runner`
-ServiceAccount, read-only ClusterRole, and the `langfuse-eval-keys` ExternalSecret.
-It syncs with the kagent app.
+## Prereqs (GitOps-managed, sync with the kagent app)
+- `manifests/kagent/resources/eval-runner.yaml` — `eval-runner` SA, read-only
+  ClusterRole, `langfuse-eval-keys` ExternalSecret (langfuse + anthropic keys).
+- `manifests/kagent/resources/eval-runner-configmap.yaml` — the runner + dataset,
+  **generated** from `runner.py` + `dataset-v1.yaml` (regen command in its header
+  after you change either).
 
-## Run
+## Run an ad-hoc eval
 
 ```bash
-# 1. Package the runner + dataset into a ConfigMap (from the repo files)
-kubectl -n kagent create configmap eval-runner \
-  --from-file=runner.py=evals/k8s-agent/runner.py \
-  --from-file=dataset-v1.yaml=evals/k8s-agent/dataset-v1.yaml \
-  --dry-run=client -o yaml | kubectl apply -f -
-
-# 2. Launch the run
 kubectl -n kagent create -f evals/k8s-agent/job.yaml
-
-# 3. Watch
-kubectl -n kagent logs -f job/<job-name>   # name printed by step 2
+kubectl -n kagent logs -f job/<job-name>   # name printed above
 ```
 
-Results land in Langfuse (`langfuse.homelab.n2solutions.io`) as dataset
-**`k8s-agent-v1`**, run **`baseline-<timestamp>`**, with `correct` and
-`tool_used` scores per item. The job log prints a summary (accuracy, tool-use rate).
+If Langfuse is **up**, results land at `langfuse.homelab.n2solutions.io` (dataset
+`k8s-agent-v1`, run `baseline-<ts>`) with `correct`/`tool_used`/`judge` scores.
+If Langfuse is **parked** (see `../langfuse-scale.sh`), scores are still computed
+and printed — storage is just skipped.
+
+## Regression gate (M-eval-4)
+
+`manifests/kagent/resources/eval-regression-gate-cronjob.yaml` runs the eval
+**weekly** with `EVAL_GATE=1`, exiting non-zero if accuracy / tool-use / judge
+drops below its floor (`EVAL_MIN_*`). A failed gate Job trips the
+**`AgentEvalRegression`** alert (Alertmanager → Slack).
+
+```bash
+# trigger the gate on demand (e.g. after changing an agent prompt/model)
+kubectl -n kagent create job --from=cronjob/eval-regression-gate eval-gate-manual
+kubectl -n kagent logs -f job/eval-gate-manual   # look for GATE: PASS / FAIL
+```
 
 ## Scope
-- ✅ Deterministic correctness + tool-use scoring (this runner).
-- ⏳ Reasoning items are logged but unscored — LLM-as-judge is **M-eval-3**.
-- ⏳ Scheduling as a regression gate is **M-eval-4**.
+- ✅ Deterministic correctness + tool-use scoring
+- ✅ LLM-as-judge on reasoning items (M-eval-3)
+- ✅ Scheduled regression gate + alert (M-eval-4)

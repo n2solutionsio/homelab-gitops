@@ -1,0 +1,28 @@
+# Alert when the k8s-agent eval regression gate fails — i.e. agent quality
+# dropped below a baseline floor (accuracy / tool-use / judge). The gate Job
+# exits non-zero on a breach; kube-state-metrics surfaces the failed Job.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: eval-regression-gate
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: eval-regression-gate
+      rules:
+        - alert: AgentEvalRegression
+          expr: |
+            kube_job_status_failed{namespace="kagent", job_name=~"eval-regression-gate.*"} > 0
+          for: 1m
+          keep_firing_for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: k8s-agent eval regression gate FAILED
+            description: >-
+              The scheduled k8s-agent evaluation ({{ $labels.job_name }}) failed its
+              regression gate — a quality metric (accuracy / tool-use / judge) dropped
+              below its baseline floor. Check the Job logs
+              (kubectl -n kagent logs job/{{ $labels.job_name }}) and the Langfuse run.
