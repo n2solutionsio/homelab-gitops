@@ -35,11 +35,16 @@ langfuse:
   # restricted-compliant (the langfuse v3 image runs as non-root by default).
   podSecurityContext:
     runAsNonRoot: true
+    # The image's default user is `nextjs` (a name) = uid 1001. runAsNonRoot
+    # needs a NUMERIC uid to verify non-root, else CreateContainerConfigError.
+    runAsUser: 1001
+    fsGroup: 1001
     seccompProfile:
       type: RuntimeDefault
   securityContext:
     allowPrivilegeEscalation: false
     runAsNonRoot: true
+    runAsUser: 1001
     capabilities:
       drop:
         - ALL
