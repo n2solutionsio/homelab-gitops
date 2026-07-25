@@ -34,6 +34,14 @@ spec:
         - .spec.target.deletionPolicy
         - .spec.target.template.engineVersion
         - .spec.target.template.mergePolicy
+    # Ignore replica counts so Langfuse can be parked (scaled to 0) on demand
+    # without ArgoCD self-healing it back up. See evals/langfuse-scale.sh.
+    - group: apps
+      kind: Deployment
+      jqPathExpressions: [".spec.replicas"]
+    - group: apps
+      kind: StatefulSet
+      jqPathExpressions: [".spec.replicas"]
   syncPolicy:
     automated:
       prune: true
