@@ -144,11 +144,33 @@ alloy:
           endpoint = "0.0.0.0:4318"
         }
         output {
-          // Fan out: Tempo (infra tracing) AND Langfuse (LLM observability/eval).
+          // Tempo gets ALL traces (infra tracing). Langfuse gets only agent/LLM
+          // traces, via the tail_sampling filter below.
           traces = [
             otelcol.exporter.otlp.tempo.input,
-            otelcol.exporter.otlphttp.langfuse.input,
+            otelcol.processor.tail_sampling.langfuse.input,
           ]
+        }
+      }
+
+      // Only forward agent/LLM traces to Langfuse: keep a WHOLE trace iff it
+      // contains a span with a gen_ai.* attribute (the actual LLM work). This
+      // drops health/readiness/metrics probe traces so the eval store stays
+      // clean, without mangling the agent trace's internal HTTP spans (a
+      // span-level filter would). Trace-level decision after decision_wait.
+      otelcol.processor.tail_sampling "langfuse" {
+        decision_wait = "30s"
+        policy {
+          name = "keep-genai-traces"
+          type = "string_attribute"
+          string_attribute {
+            key                    = "gen_ai.system"
+            values                 = [".+"]
+            enabled_regex_matching = true
+          }
+        }
+        output {
+          traces = [otelcol.exporter.otlphttp.langfuse.input]
         }
       }
 
