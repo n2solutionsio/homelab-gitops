@@ -57,9 +57,11 @@ data:
         ground_truth: { type: computed, check: "kubectl -n ai-org get deploy orchestrator -o jsonpath='{.spec.template.spec.containers[0].image}'", match: contains }
         expect_tool: k8s_get_resources
 
-      - id: clickhouse-mem-limit
-        input: "What is the memory limit of the clickhouse container in the langfuse namespace?"
-        ground_truth: { type: computed, check: "kubectl -n langfuse get pod langfuse-clickhouse-shard0-0 -o jsonpath='{.spec.containers[0].resources.limits.memory}'", match: contains }
+      # Target an always-running core pod (kagent-controller), NOT a parkable service
+      # like Langfuse — else the ground-truth check returns empty when it's scaled to 0.
+      - id: controller-mem-limit
+        input: "What is the memory limit of the kagent-controller container in the kagent namespace?"
+        ground_truth: { type: computed, check: "kubectl -n kagent get deploy kagent-controller -o jsonpath='{.spec.template.spec.containers[0].resources.limits.memory}'", match: contains }
         expect_tool: k8s_get_resources
 
       - id: monitoring-svc-count
