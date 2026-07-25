@@ -1,0 +1,50 @@
+# Eval 01 run Job. Triggered manually (see README.md) after the ConfigMap
+# eval-runner (runner.py + dataset-v1.yaml) is created from the repo files.
+# python:3.12-slim + kubectl (downloaded) + pyyaml; runs as the eval-runner SA.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: eval-k8s-agent-
+  namespace: kagent
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      serviceAccountName: eval-runner
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: runner
+          image: python:3.12-slim
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities: { drop: ["ALL"] }
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+              python3 -c "import urllib.request; urllib.request.urlretrieve('https://dl.k8s.io/release/v1.33.0/bin/linux/amd64/kubectl','/tmp/kubectl')"
+              chmod +x /tmp/kubectl && export PATH=/tmp:$PATH
+              pip install --quiet --no-cache-dir pyyaml
+              python3 /config/runner.py
+          envFrom:
+            - secretRef: { name: langfuse-eval-keys }
+          env:
+            - name: LANGFUSE_PUBLIC_KEY
+              valueFrom: { secretKeyRef: { name: langfuse-eval-keys, key: public-key } }
+            - name: LANGFUSE_SECRET_KEY
+              valueFrom: { secretKeyRef: { name: langfuse-eval-keys, key: secret-key } }
+            - name: LANGFUSE_HOST
+              value: "http://langfuse-web.langfuse.svc.cluster.local:3000"
+          volumeMounts:
+            - name: eval-runner
+              mountPath: /config
+      volumes:
+        - name: eval-runner
+          configMap: { name: eval-runner }

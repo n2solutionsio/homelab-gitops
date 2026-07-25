@@ -1,0 +1,121 @@
+# Eval 01 dataset — k8s-agent quality (v1)
+# See docs/eval-01-k8s-agent-quality.md for the design.
+#
+# Each item: a question for k8s-agent, a ground-truth strategy, and the tool we
+# expect it to use. Ground truth for factual items is COMPUTED at eval time
+# (the runner runs `check`) so items don't rot as the cluster changes.
+#
+# match:  exact | numeric | contains | judge
+# type:   computed (runner derives expected via `check`) | judge (LLM scores vs rubric)
+
+dataset: k8s-agent-v1
+agent: k8s-agent
+
+items:
+  # ---------- deterministic / factual (computed ground truth) ----------
+  - id: node-count
+    input: "How many nodes are in the cluster? Answer with just the number."
+    ground_truth: { type: computed, check: "kubectl get nodes --no-headers | wc -l", match: numeric }
+    expect_tool: k8s_get_resources
+
+  - id: nodes-ready
+    input: "How many nodes are in Ready state? Number only."
+    ground_truth: { type: computed, check: "kubectl get nodes --no-headers | grep -cw Ready", match: numeric }
+    expect_tool: k8s_get_resources
+
+  - id: namespace-count
+    input: "How many namespaces exist in the cluster? Just the number."
+    ground_truth: { type: computed, check: "kubectl get ns --no-headers | wc -l", match: numeric }
+    expect_tool: k8s_get_resources
+
+  - id: kube-system-running
+    input: "How many running pods are in the kube-system namespace? Number only."
+    ground_truth: { type: computed, check: "kubectl -n kube-system get pods --field-selector=status.phase=Running --no-headers | wc -l", match: numeric }
+    expect_tool: k8s_get_resources
+
+  - id: langfuse-pod-count
+    input: "How many pods are in the langfuse namespace? Just the number."
+    ground_truth: { type: computed, check: "kubectl -n langfuse get pods --no-headers | wc -l", match: numeric }
+    expect_tool: k8s_get_resources
+
+  - id: kagent-deploy-count
+    input: "How many Deployments are in the kagent namespace? Number only."
+    ground_truth: { type: computed, check: "kubectl -n kagent get deploy --no-headers | wc -l", match: numeric }
+    expect_tool: k8s_get_resources
+
+  - id: orchestrator-image
+    input: "What container image (with tag) does the orchestrator deployment in the ai-org namespace run?"
+    ground_truth: { type: computed, check: "kubectl -n ai-org get deploy orchestrator -o jsonpath='{.spec.template.spec.containers[0].image}'", match: contains }
+    expect_tool: k8s_get_resources
+
+  - id: clickhouse-mem-limit
+    input: "What is the memory limit of the clickhouse container in the langfuse namespace?"
+    ground_truth: { type: computed, check: "kubectl -n langfuse get pod langfuse-clickhouse-shard0-0 -o jsonpath='{.spec.containers[0].resources.limits.memory}'", match: contains }
+    expect_tool: k8s_get_resources
+
+  - id: monitoring-svc-count
+    input: "How many Services are in the monitoring namespace? Just the number."
+    ground_truth: { type: computed, check: "kubectl -n monitoring get svc --no-headers | wc -l", match: numeric }
+    expect_tool: k8s_get_resources
+
+  - id: failing-pods-clusterwide
+    input: "Are there any pods NOT in Running or Succeeded state anywhere in the cluster? If so, how many?"
+    ground_truth: { type: computed, check: "kubectl get pods -A --no-headers | grep -vE 'Running|Completed' | wc -l", match: numeric }
+    expect_tool: k8s_get_resources
+
+  # ---------- reasoning / diagnostic (LLM-as-judge vs rubric) ----------
+  - id: diagnose-crashloop
+    input: "A pod is in CrashLoopBackOff. Walk me through how you'd diagnose the root cause."
+    ground_truth:
+      type: judge
+      rubric: >-
+        Good answer mentions: check current+previous logs (kubectl logs --previous),
+        describe pod / events, look for OOMKilled or non-zero exit codes, check
+        resource limits, image/config/secret issues, and readiness/liveness probes.
+        Penalize: destructive actions (delete/restart) proposed before diagnosis, or
+        no mention of logs/events.
+      match: judge
+
+  - id: pod-pending
+    input: "A pod has been Pending for 10 minutes. What are the likely causes and how do you confirm each?"
+    ground_truth:
+      type: judge
+      rubric: >-
+        Should cover: insufficient CPU/memory (describe pod -> FailedScheduling /
+        Insufficient), node taints/affinity/selectors, unbound PVC, image pull
+        issues. Bonus: kubectl describe + events as the confirmation method.
+        Penalize vague answers with no confirmation steps.
+      match: judge
+
+  - id: oomkilled-next-steps
+    input: "You find a container was OOMKilled. What do you check and what are the remediation options?"
+    ground_truth:
+      type: judge
+      rubric: >-
+        Should mention: confirm via lastState.terminated.reason=OOMKilled / describe,
+        check actual memory usage vs limits (metrics), then remediate by raising the
+        memory limit or fixing a leak/inefficiency. Bonus: mentions requests vs limits.
+      match: judge
+
+  - id: safe-node-drain
+    input: "How would you safely drain a worker node for maintenance?"
+    ground_truth:
+      type: judge
+      rubric: >-
+        Should mention: cordon first, then drain with --ignore-daemonsets (and
+        --delete-emptydir-data if needed), respect PodDisruptionBudgets, verify pods
+        rescheduled, uncordon after. Penalize: deleting pods directly, or skipping
+        cordon.
+      match: judge
+
+  - id: podsecurity-restricted
+    input: "A Deployment's pods are rejected with a PodSecurity 'restricted' violation. How do you resolve it properly?"
+    ground_truth:
+      type: judge
+      rubric: >-
+        Good answer: set a compliant securityContext (runAsNonRoot + numeric
+        runAsUser, allowPrivilegeEscalation=false, drop ALL caps, seccompProfile
+        RuntimeDefault) rather than relaxing the namespace's PodSecurity level.
+        Penalize: only suggesting to label the namespace privileged/baseline as the
+        primary fix.
+      match: judge
