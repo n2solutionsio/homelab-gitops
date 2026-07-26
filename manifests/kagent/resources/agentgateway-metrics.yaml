@@ -1,10 +1,16 @@
-# Scrape agentgateway metrics (:15020) from every kmcp-managed MCP server pod.
+# Scrape agentgateway metrics (:15020) from the kmcp-managed MCP server pods.
 #
 # The MCP containers declare NO container ports, so a PodMonitor (which attaches
 # to declared ports) can't target :15020 — Prometheus discovers the pods but
 # drops them for having no port. A Service resolves targetPort 15020 into
 # Endpoints regardless of whether the container declares the port, and a
 # ServiceMonitor scrapes those endpoints (one target per MCP pod).
+#
+# NOTE: only stdio-transport MCP servers are fronted by agentgateway and expose
+# :15020. http-transport servers (transportType: http, e.g. unifi-mcp-server —
+# an HTTP-native image with its own IngressRoute) run the raw MCP server with no
+# agentgateway layer, so they have no :15020. They still match the kmcp selector,
+# so the ServiceMonitor drops them below to avoid a false TargetDown.
 #
 # See docs/ai-platform-roadmap.md (Track A / M1).
 ---
@@ -45,3 +51,9 @@ spec:
     - port: metrics
       path: /metrics
       interval: 30s
+      relabelings:
+        # Drop http-transport MCP servers (no agentgateway, no :15020). Update
+        # the regex if another http-transport MCP server is added.
+        - sourceLabels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+          regex: unifi-mcp-server
+          action: drop
