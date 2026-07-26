@@ -9,7 +9,7 @@ spec:
   project: default
   sources:
     - repoURL: https://openbao.github.io/openbao-helm
-      targetRevision: 0.26.0
+      targetRevision: 0.28.5
       chart: openbao
       helm:
         valueFiles:
