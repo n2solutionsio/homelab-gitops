@@ -3,6 +3,10 @@
 # set can assume the OpenBao `terraform-ci` role (which is bound to the
 # `terraform-runner` ServiceAccount below).
 
+controllerServiceAccount:               # link to the existing shared ARC controller
+  name: gha-runner-controller-gha-rs-controller
+  namespace: arc-systems
+
 githubConfigUrl: https://github.com/n2solutionsio
 githubConfigSecret: github-app-runner   # shared ESO-managed secret in arc-runners
 
