@@ -18,3 +18,7 @@ path "secret/data/k3s-cluster-token" {
 path "secret/data/proxmox-automation-token-secret" {
   capabilities = ["read"]
 }
+
+path "secret/data/unifi-terraform" {
+  capabilities = ["read"]
+}

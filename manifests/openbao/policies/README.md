@@ -23,6 +23,7 @@ same k8s auth method External Secrets Operator already uses.
   | `tfstate-r2` | `access_key_id`, `secret_access_key`, `account_id` |
   | `k3s-cluster-token` | `token` |
   | `proxmox-automation-token-secret` | `Secret`, `host`, `token_id`, `endpoint` |
+  | `unifi-terraform` | `username`, `password` |
 
 ## ⚠️ Security note
 
@@ -81,6 +82,8 @@ export R2_ACCOUNT_ID=$(bao kv get -field=account_id secret/tfstate-r2)
 export PROXMOX_VE_ENDPOINT=$(bao kv get -field=endpoint secret/proxmox-automation-token-secret)
 export PROXMOX_VE_API_TOKEN="$(bao kv get -field=token_id secret/proxmox-automation-token-secret)=$(bao kv get -field=Secret secret/proxmox-automation-token-secret)"
 export K3S_TOKEN=$(bao kv get -field=token secret/k3s-cluster-token)
+export UNIFI_USERNAME=$(bao kv get -field=username secret/unifi-terraform)
+export UNIFI_PASSWORD=$(bao kv get -field=password secret/unifi-terraform)
 ```
 
 Note: snippet uploads still require SSH-as-root to the Proxmox host, but the k3s
