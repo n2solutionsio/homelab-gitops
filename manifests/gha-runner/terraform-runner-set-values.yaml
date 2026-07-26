@@ -1,0 +1,28 @@
+# Dedicated ARC runner scale set for the terragrunt CI (runs-on: terraform-runner).
+# Isolated from the general-purpose `gha-runner-set` so that only jobs on THIS
+# set can assume the OpenBao `terraform-ci` role (which is bound to the
+# `terraform-runner` ServiceAccount below).
+
+githubConfigUrl: https://github.com/n2solutionsio
+githubConfigSecret: github-app-runner   # shared ESO-managed secret in arc-runners
+
+runnerScaleSetName: terraform-runner    # the `runs-on:` label
+
+minRunners: 0
+maxRunners: 2
+runnerGroup: default
+
+template:
+  spec:
+    serviceAccountName: terraform-runner
+    containers:
+      - name: runner
+        image: ghcr.io/actions/actions-runner:latest
+        command: ["/home/runner/run.sh"]
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 1000m
+            memory: 512Mi
