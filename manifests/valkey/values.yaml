@@ -19,7 +19,7 @@ primary:
       cpu: 100m
       memory: 64Mi
     limits:
-      cpu: 300m
+      cpu: 1000m
       memory: 128Mi
   configuration: |-
     maxmemory 96mb
@@ -40,5 +40,5 @@ metrics:
       cpu: 10m
       memory: 16Mi
     limits:
-      cpu: 100m
+      cpu: 200m
       memory: 32Mi
