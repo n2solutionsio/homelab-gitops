@@ -9,7 +9,7 @@ spec:
   project: default
   sources:
     - repoURL: https://falcosecurity.github.io/charts
-      targetRevision: 8.0.5
+      targetRevision: 9.1.0
       chart: falco
       helm:
         valueFiles:
