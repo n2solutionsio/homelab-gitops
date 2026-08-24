@@ -14,7 +14,7 @@ same k8s auth method External Secrets Operator already uses.
 - **Auth role** `terraform-ci` (mount `kubernetes/`) — binds SA
   `gha-runner-set-gha-rs-no-permission` in namespace `arc-runners` to the policy
   below, with a 20-minute token TTL.
-- **Policy** `terraform-ci` (`terraform-ci.hcl`) — read-only on three KV v2
+- **Policy** `terraform-ci` (`terraform-ci.hcl`) — read-only on five KV v2
   paths, nothing else.
 - **KV secrets** (mount `secret`, v2), populated from 1Password:
 
@@ -24,6 +24,7 @@ same k8s auth method External Secrets Operator already uses.
   | `k3s-cluster-token` | `token` |
   | `proxmox-automation-token-secret` | `Secret`, `host`, `token_id`, `endpoint` |
   | `unifi-terraform` | `username`, `password` |
+  | `homelab-automation-ssh` | `public-key` (public half only) |
 
 ## ⚠️ Security note
 
