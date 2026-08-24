@@ -22,3 +22,10 @@ path "secret/data/proxmox-automation-token-secret" {
 path "secret/data/unifi-terraform" {
   capabilities = ["read"]
 }
+
+# Public half of the automation SSH key, consumed as a cloud-init input by
+# compute/demo-kubeadm. Only the public key is stored under this path; the
+# private half stays in 1Password and AWX and is never readable by CI.
+path "secret/data/homelab-automation-ssh" {
+  capabilities = ["read"]
+}
