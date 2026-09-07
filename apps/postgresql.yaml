@@ -10,7 +10,7 @@ spec:
   sources:
     - repoURL: registry-1.docker.io/bitnamicharts
       chart: postgresql
-      targetRevision: 18.5.2
+      targetRevision: 18.8.17
       helm:
         valueFiles:
           - $values/manifests/postgresql/values.yaml
