@@ -86,6 +86,45 @@ alloy:
         forward_to = [loki.write.loki.receiver]
       }
 
+      // Promote the RFC3164 header fields worth keeping from internal
+      // (__syslog_*) labels to real labels. loki.source.syslog strips every
+      // "__"-prefixed label before forwarding, so without this the header is
+      // lost and every sender collapses into a single stream: the UDM is only
+      // identifiable today because it happens to repeat its own hostname
+      // inside the message body, while the pihole and proxmox lines are
+      // indistinguishable from each other.
+      //
+      // hostname, app_name, severity and facility are all bounded (a handful
+      // of hosts, a few dozen program names). __syslog_message_proc_id is
+      // deliberately NOT promoted — it is the PID, so it would mint a new
+      // stream on every process restart.
+      //
+      // forward_to is empty because this component is used only for its
+      // `rules` export, consumed by loki.source.syslog.relabel_rules below.
+      loki.relabel "syslog" {
+        forward_to = []
+
+        rule {
+          source_labels = ["__syslog_message_hostname"]
+          target_label  = "hostname"
+        }
+
+        rule {
+          source_labels = ["__syslog_message_app_name"]
+          target_label  = "app_name"
+        }
+
+        rule {
+          source_labels = ["__syslog_message_severity"]
+          target_label  = "severity"
+        }
+
+        rule {
+          source_labels = ["__syslog_message_facility"]
+          target_label  = "facility"
+        }
+      }
+
       // Receive syslog from network devices (UDP, RFC 3164)
       loki.source.syslog "network" {
         listener {
@@ -94,7 +133,8 @@ alloy:
           syslog_format = "rfc3164"
           labels        = { job = "syslog" }
         }
-        forward_to = [loki.process.syslog_geoip.receiver]
+        relabel_rules = loki.relabel.syslog.rules
+        forward_to    = [loki.process.syslog_geoip.receiver]
       }
 
       // Enrich firewall logs with GeoIP data from MaxMind
