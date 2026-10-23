@@ -55,7 +55,7 @@ data:
           "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
           "targets": [
             {
-              "expr": "sum(count_over_time({job=\"syslog\"} |= \"WAN_LOCAL\" |= \"-D-\" [$__interval]))",
+              "expr": "sum(count_over_time({job=\"syslog\", hostname=\"UDM-Pro\"} |= \"WAN_LOCAL\" |= \"-D-\" [$__interval]))",
               "legendFormat": "Blocked packets",
               "refId": "A"
             }
@@ -99,7 +99,7 @@ data:
           "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
           "targets": [
             {
-              "expr": "sum by (proto) (count_over_time({job=\"syslog\"} |= \"WAN_LOCAL\" |= \"-D-\" | regexp \"PROTO=(?P<proto>\\\\S+)\" [$__range]))",
+              "expr": "sum by (proto) (count_over_time({job=\"syslog\", hostname=\"UDM-Pro\"} |= \"WAN_LOCAL\" |= \"-D-\" | regexp \"PROTO=(?P<proto>\\\\S+)\" [$__range]))",
               "legendFormat": "{{proto}}",
               "refId": "A"
             }
@@ -136,7 +136,7 @@ data:
           "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
           "targets": [
             {
-              "expr": "sum by (geoip_country_name, geoip_location_latitude, geoip_location_longitude) (count_over_time({job=\"syslog\"} |= \"WAN_LOCAL\" |= \"-D-\" | geoip_country_name != \"\" [$__range]))",
+              "expr": "sum by (geoip_country_name, geoip_location_latitude, geoip_location_longitude) (count_over_time({job=\"syslog\", hostname=\"UDM-Pro\"} |= \"WAN_LOCAL\" |= \"-D-\" | geoip_country_name != \"\" [$__range]))",
               "legendFormat": "{{geoip_country_name}}",
               "refId": "A",
               "instant": true
@@ -231,7 +231,7 @@ data:
           "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
           "targets": [
             {
-              "expr": "topk(10, sum by (geoip_country_name) (count_over_time({job=\"syslog\"} |= \"WAN_LOCAL\" |= \"-D-\" | geoip_country_name != \"\" [$__range])))",
+              "expr": "topk(10, sum by (geoip_country_name) (count_over_time({job=\"syslog\", hostname=\"UDM-Pro\"} |= \"WAN_LOCAL\" |= \"-D-\" | geoip_country_name != \"\" [$__range])))",
               "legendFormat": "",
               "refId": "A",
               "instant": true
@@ -302,7 +302,7 @@ data:
           "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
           "targets": [
             {
-              "expr": "topk(20, sum by (src) (count_over_time({job=\"syslog\"} |= \"WAN_LOCAL\" |= \"-D-\" | regexp \"SRC=(?P<src>\\\\S+)\" [$__range])))",
+              "expr": "topk(20, sum by (src) (count_over_time({job=\"syslog\", hostname=\"UDM-Pro\"} |= \"WAN_LOCAL\" |= \"-D-\" | regexp \"SRC=(?P<src>\\\\S+)\" [$__range])))",
               "legendFormat": "",
               "refId": "A",
               "instant": true
@@ -367,7 +367,7 @@ data:
           "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
           "targets": [
             {
-              "expr": "topk(20, sum by (dpt) (count_over_time({job=\"syslog\"} |= \"WAN_LOCAL\" |= \"-D-\" |= \"DPT=\" | regexp \"DPT=(?P<dpt>\\\\S+)\" [$__range])))",
+              "expr": "topk(20, sum by (dpt) (count_over_time({job=\"syslog\", hostname=\"UDM-Pro\"} |= \"WAN_LOCAL\" |= \"-D-\" |= \"DPT=\" | regexp \"DPT=(?P<dpt>\\\\S+)\" [$__range])))",
               "legendFormat": "",
               "refId": "A",
               "instant": true
@@ -439,7 +439,7 @@ data:
           "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
           "targets": [
             {
-              "expr": "topk(10, sum by (rule) (count_over_time({job=\"syslog\"} |~ \"\\\\[.*-[DR]-\" | regexp \"\\\\[(?P<rule>[^\\\\]]+)\\\\]\" [$__range])))",
+              "expr": "topk(10, sum by (rule) (count_over_time({job=\"syslog\", hostname=\"UDM-Pro\"} |~ \"\\\\[.*-[DR]-\" | regexp \"\\\\[(?P<rule>[^\\\\]]+)\\\\]\" [$__range])))",
               "legendFormat": "",
               "refId": "A",
               "instant": true
@@ -505,7 +505,7 @@ data:
           "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
           "targets": [
             {
-              "expr": "sum(count_over_time({job=\"syslog\"} |= \"WAN_LOCAL\" |= \"-D-\" |= \"PROTO=TCP\" |= \"SYN URGP\" [$__interval]))",
+              "expr": "sum(count_over_time({job=\"syslog\", hostname=\"UDM-Pro\"} |= \"WAN_LOCAL\" |= \"-D-\" |= \"PROTO=TCP\" |= \"SYN URGP\" [$__interval]))",
               "legendFormat": "SYN scans",
               "refId": "A"
             }
@@ -555,7 +555,7 @@ data:
           "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
           "targets": [
             {
-              "expr": "sum by (iface, proto) (count_over_time({job=\"syslog\"} |= \"LAN_LOCAL\" |= \"-RET-\" | regexp \"IN=(?P<iface>\\\\S+).*PROTO=(?P<proto>\\\\S+)\" [$__range]))",
+              "expr": "sum by (iface, proto) (count_over_time({job=\"syslog\", hostname=\"UDM-Pro\"} |= \"LAN_LOCAL\" |= \"-RET-\" | regexp \"IN=(?P<iface>\\\\S+).*PROTO=(?P<proto>\\\\S+)\" [$__range]))",
               "legendFormat": "",
               "refId": "A",
               "instant": true
@@ -634,7 +634,7 @@ data:
           "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
           "targets": [
             {
-              "expr": "{job=\"syslog\"} |= \"WAN_LOCAL\" |= \"-D-\"",
+              "expr": "{job=\"syslog\", hostname=\"UDM-Pro\"} |= \"WAN_LOCAL\" |= \"-D-\"",
               "refId": "A"
             }
           ],
