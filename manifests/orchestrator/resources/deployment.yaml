@@ -8,7 +8,9 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "1"
 spec:
-  replicas: 1
+  # Paused: scheduled vulnerability sync is filing duplicate issues and the
+  # bot needs inbound-message authorization. Restore to 1 once fixed upstream.
+  replicas: 0
   # RollingUpdate (not Recreate) so a missing or unhealthy image keeps
   # the old pod running indefinitely instead of taking the service down.
   # maxSurge=1 + maxUnavailable=0 means we briefly run 2 pods during a

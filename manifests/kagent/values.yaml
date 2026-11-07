@@ -59,8 +59,10 @@ providers:
 # (0.9.x: these are top-level keys, not nested under `agents:`.)
 k8s-agent:
   enabled: true
+# Disabled: write-capable (helm upgrade/uninstall). Re-enable only behind
+# authenticated access and an approval gate.
 helm-agent:
-  enabled: true
+  enabled: false
 observability-agent:
   enabled: true
 promql-agent:
@@ -73,8 +75,9 @@ argo-rollouts-agent:
   enabled: false
 cilium-policy-agent:
   enabled: true
+# Disabled: write-capable (install/upgrade/toggle Cilium).
 cilium-manager-agent:
-  enabled: true
+  enabled: false
 cilium-debug-agent:
   enabled: true
 
@@ -82,8 +85,14 @@ cilium-debug-agent:
 kmcp:
   enabled: true
 
+# Read-only RBAC: the tools ServiceAccount gets get/list/watch instead of the
+# chart default (cluster-admin). No Secrets access. Write tools on any agent
+# (e.g. k8s-agent) are refused by the API server rather than trusted to the prompt.
 kagent-tools:
   enabled: true
+  rbac:
+    readOnly: true
+    allowSecrets: false
 
 # Tools.
 # (0.9.x: these are top-level keys, not nested under `tools:`.)
