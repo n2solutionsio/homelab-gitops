@@ -17,12 +17,9 @@ template:
       - name: runner
         image: ghcr.io/actions/actions-runner:latest
         command: ["/home/runner/run.sh"]
-        env:
-          - name: OP_SERVICE_ACCOUNT_TOKEN
-            valueFrom:
-              secretKeyRef:
-                name: op-sa-token
-                key: OP_SERVICE_ACCOUNT_TOKEN
+        # No 1Password token on org-wide runners: any workflow that can target
+        # this label could read it. Playbooks that need 1Password run from an
+        # operator workstation with `op run` instead.
         resources:
           requests:
             cpu: 100m
