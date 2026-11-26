@@ -1,0 +1,89 @@
+# Lab UPS alerts (ADR-0028 in homelab-2.0), from the NUT exporter.
+# NUT on ntp-01 forces a shutdown after 120 s on battery, so the on-battery
+# alert has to fire well inside that. Prometheus itself runs on the R720 and
+# goes down with it: these alerts cover the first minutes, not the whole
+# outage.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ups-alerts
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: ups.rules
+      rules:
+        - alert: UPSOnBattery
+          expr: network_ups_tools_ups_status{flag="OB"} == 1
+          for: 15s
+          labels:
+            severity: critical
+          annotations:
+            summary: Lab UPS is on battery
+            description: >-
+              Mains power is out. NUT shuts the lab down after 2 minutes on
+              battery. Battery {{ with query "network_ups_tools_battery_charge" }}{{ . | first | value }}{{ end }}%.
+
+        - alert: UPSLowBattery
+          expr: network_ups_tools_ups_status{flag="LB"} == 1
+          labels:
+            severity: critical
+          annotations:
+            summary: Lab UPS battery is low
+            description: >-
+              Charge or runtime is below NUT's threshold (50% or 10 minutes).
+              The lab is shutting down.
+
+        - alert: UPSForcedShutdown
+          expr: network_ups_tools_ups_status{flag="FSD"} == 1
+          labels:
+            severity: critical
+          annotations:
+            summary: Lab UPS forced shutdown in progress
+
+        - alert: UPSReplaceBattery
+          expr: network_ups_tools_ups_status{flag="RB"} == 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Lab UPS reports its battery needs replacing
+
+        # Measured full load 2026-11-26: 29%, 26 min estimated runtime.
+        - alert: UPSLoadHigh
+          expr: network_ups_tools_ups_load > 70
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Lab UPS load is {{ $value }}%
+            description: >-
+              Above 70% for 10 minutes. Runtime is short at this load; check
+              what was added to the UPS.
+
+        - alert: UPSRuntimeShort
+          expr: |
+            network_ups_tools_battery_runtime < 900
+            and on() network_ups_tools_ups_status{flag="OL"} == 1
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: Lab UPS runtime on mains is under 15 minutes
+            description: >-
+              Estimated runtime is {{ $value | humanizeDuration }} while on
+              mains power. More load or an ageing battery; the 2-minute
+              shutdown still has margin, but less than before.
+
+        - alert: UPSMetricsMissing
+          expr: absent(network_ups_tools_ups_status{flag="OL"})
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: No UPS metrics from the NUT exporter
+            description: >-
+              The exporter can't reach NUT on ntp-01, or the driver lost the
+              UPS. Automatic shutdown may not work: check `upsc ups@localhost`
+              on ntp-01.
