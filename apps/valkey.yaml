@@ -10,7 +10,7 @@ spec:
   sources:
     - repoURL: registry-1.docker.io/bitnamicharts
       chart: valkey
-      targetRevision: 5.4.3
+      targetRevision: 5.6.5
       helm:
         valueFiles:
           - $values/manifests/valkey/values.yaml
