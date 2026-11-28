@@ -32,7 +32,7 @@ spec:
             seccompProfile: { type: RuntimeDefault }
           containers:
             - name: runner
-              image: python:3.12-slim
+              image: python:3.13-slim
               securityContext:
                 allowPrivilegeEscalation: false
                 runAsNonRoot: true
